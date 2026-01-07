@@ -212,6 +212,15 @@
 
 <style>
     .lyrics-panel {
+        /* Theme-aware lyrics colors - light theme default */
+        --lyrics-inactive: rgba(0, 0, 0, 0.4);
+        --lyrics-near: rgba(0, 0, 0, 0.5);
+        --lyrics-mid: rgba(0, 0, 0, 0.35);
+        --lyrics-far: rgba(0, 0, 0, 0.25);
+        --lyrics-past-near: rgba(0, 0, 0, 0.45);
+        --lyrics-past-mid: rgba(0, 0, 0, 0.3);
+        --lyrics-past-far: rgba(0, 0, 0, 0.2);
+        
         width: 350px;
         min-width: 300px;
         max-width: 400px;
@@ -225,6 +234,17 @@
         display: flex;
         flex-direction: column;
         animation: slideIn 0.3s ease;
+    }
+
+    /* Dark theme overrides */
+    :global([data-theme="dark"]) .lyrics-panel {
+        --lyrics-inactive: rgba(255, 255, 255, 0.4);
+        --lyrics-near: rgba(255, 255, 255, 0.5);
+        --lyrics-mid: rgba(255, 255, 255, 0.35);
+        --lyrics-far: rgba(255, 255, 255, 0.25);
+        --lyrics-past-near: rgba(255, 255, 255, 0.45);
+        --lyrics-past-mid: rgba(255, 255, 255, 0.3);
+        --lyrics-past-far: rgba(255, 255, 255, 0.2);
     }
 
     @keyframes slideIn {
@@ -321,7 +341,7 @@
         font-size: 1.1rem;
         font-weight: 600;
         line-height: 1.5;
-        color: rgba(255, 255, 255, 0.4);
+        color: var(--lyrics-inactive);
         transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
         cursor: default;
         filter: blur(0px);
@@ -329,17 +349,17 @@
 
     /* Distance-based blur effect like Apple Music */
     .lyric-line.near {
-        color: rgba(255, 255, 255, 0.5);
+        color: var(--lyrics-near);
 
     }
 
     .lyric-line.mid {
-        color: rgba(255, 255, 255, 0.35);
+        color: var(--lyrics-mid);
 
     }
 
     .lyric-line.far {
-        color: rgba(255, 255, 255, 0.25);
+        color: var(--lyrics-far);
     }
 
     .lyric-line.active {
@@ -355,25 +375,23 @@
     }
 
     .lyric-line.past.near {
-        color: rgba(255, 255, 255, 0.45);
+        color: var(--lyrics-past-near);
         filter: blur(0.8px);
     }
 
     .lyric-line.past.mid {
-        color: rgba(255, 255, 255, 0.3);
+        color: var(--lyrics-past-mid);
         filter: blur(1.2px);
     }
 
     .lyric-line.past.far {
-        color: rgba(255, 255, 255, 0.2);
+        color: var(--lyrics-past-far);
         filter: blur(2px);
     }
 
     /* Word highlighting - Apple Music style */
     .lyric-word {
         --word-progress: 0%;
-        --highlight-color: #fff;
-        --future-color: rgba(255, 255, 255, 0.35);
         display: inline;
         color: transparent;
         background-clip: text;
@@ -385,26 +403,26 @@
     .lyric-line.word-sync .lyric-word.highlighted {
         background-image: linear-gradient(
             to right,
-            var(--highlight-color) 0%,
-            var(--highlight-color) var(--word-progress),
-            var(--future-color) var(--word-progress),
-            var(--future-color) 100%
+            var(--text-primary) 0%,
+            var(--text-primary) calc(var(--word-progress) - 15%),
+            var(--lyrics-inactive) calc(var(--word-progress) + 15%),
+            var(--lyrics-inactive) 100%
         );
     }
 
     .lyric-line.word-sync .lyric-word.past {
         background-image: linear-gradient(
             to right,
-            var(--highlight-color) 0%,
-            var(--highlight-color) 100%
+            var(--text-primary) 0%,
+            var(--text-primary) 100%
         );
     }
 
     .lyric-line.word-sync .lyric-word.future {
         background-image: linear-gradient(
             to right,
-            var(--future-color) 0%,
-            var(--future-color) 100%
+            var(--lyrics-inactive) 0%,
+            var(--lyrics-inactive) 100%
         );
     }
 
@@ -412,8 +430,8 @@
     .lyric-line.past .lyric-word {
         background-image: linear-gradient(
             to right,
-            var(--highlight-color) 0%,
-            var(--highlight-color) 100%
+            var(--text-primary) 0%,
+            var(--text-primary) 100%
         );
     }
 
@@ -421,8 +439,8 @@
     .lyric-line:not(.active):not(.past) .lyric-word {
         background-image: linear-gradient(
             to right,
-            var(--future-color) 0%,
-            var(--future-color) 100%
+            var(--lyrics-inactive) 0%,
+            var(--lyrics-inactive) 100%
         );
     }
 

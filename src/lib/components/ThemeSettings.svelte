@@ -1,0 +1,429 @@
+<script lang="ts">
+    import { fade, fly } from "svelte/transition";
+    import { isSettingsOpen, toggleSettings } from "$lib/stores/ui";
+    import { theme, presetAccents, type ThemeMode } from "$lib/stores/theme";
+
+    let customColorInput = "#1DB954";
+
+    function handleModeChange(mode: ThemeMode) {
+        theme.setMode(mode);
+    }
+
+    function handleAccentChange(color: string) {
+        theme.setAccentColor(color);
+    }
+
+    function handleCustomColorAdd() {
+        if (customColorInput && /^#[0-9A-Fa-f]{6}$/.test(customColorInput)) {
+            theme.addCustomColor(customColorInput);
+            theme.setAccentColor(customColorInput);
+        }
+    }
+
+    function handleClickOutside(e: MouseEvent) {
+        const target = e.target as HTMLElement;
+        if (!target.closest('.settings-panel') && !target.closest('.settings-trigger')) {
+            toggleSettings();
+        }
+    }
+</script>
+
+{#if $isSettingsOpen}
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div 
+        class="settings-overlay" 
+        on:click={handleClickOutside}
+        transition:fade={{ duration: 150 }}
+    >
+        <!-- svelte-ignore a11y_click_events_have_key_events -->
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <div 
+            class="settings-panel" 
+            transition:fly={{ x: 300, duration: 300 }}
+            on:click|stopPropagation
+        >
+            <header class="settings-header">
+                <h2>Settings</h2>
+                <button 
+                    class="close-btn" 
+                    on:click={toggleSettings}
+                    title="Close settings"
+                    aria-label="Close settings"
+                >
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                    </svg>
+                </button>
+            </header>
+
+            <div class="settings-content">
+                <!-- Theme Mode -->
+                <section class="settings-section">
+                    <h3 class="section-title">Appearance</h3>
+                    
+                    <div class="setting-item">
+                        <span class="setting-label">Theme Mode</span>
+                        <div class="theme-modes">
+                            <button 
+                                class="mode-btn" 
+                                class:active={$theme.mode === 'dark'}
+                                on:click={() => handleModeChange('dark')}
+                            >
+                                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                                    <path d="M9.37 5.51c-.18.64-.27 1.31-.27 1.99 0 4.08 3.32 7.4 7.4 7.4.68 0 1.35-.09 1.99-.27C17.45 17.19 14.93 19 12 19c-3.86 0-7-3.14-7-7 0-2.93 1.81-5.45 4.37-6.49zM12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/>
+                                </svg>
+                                <span>Dark</span>
+                            </button>
+                            <button 
+                                class="mode-btn" 
+                                class:active={$theme.mode === 'light'}
+                                on:click={() => handleModeChange('light')}
+                            >
+                                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                                    <path d="M6.76 4.84l-1.8-1.79-1.41 1.41 1.79 1.79 1.42-1.41zM4 10.5H1v2h3v-2zm9-9.95h-2V3.5h2V.55zm7.45 3.91l-1.41-1.41-1.79 1.79 1.41 1.41 1.79-1.79zm-3.21 13.7l1.79 1.8 1.41-1.41-1.8-1.79-1.4 1.4zM20 10.5v2h3v-2h-3zm-8-5c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm-1 16.95h2V19.5h-2v2.95zm-7.45-3.91l1.41 1.41 1.79-1.8-1.41-1.41-1.79 1.8z"/>
+                                </svg>
+                                <span>Light</span>
+                            </button>
+                            <button 
+                                class="mode-btn" 
+                                class:active={$theme.mode === 'system'}
+                                on:click={() => handleModeChange('system')}
+                            >
+                                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                                    <path d="M20 18c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z"/>
+                                </svg>
+                                <span>System</span>
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Accent Color -->
+                <section class="settings-section">
+                    <h3 class="section-title">Accent Color</h3>
+                    
+                    <div class="setting-item">
+                        <div class="color-grid">
+                            {#each presetAccents as preset}
+                                <button 
+                                    class="color-swatch"
+                                    class:active={$theme.accentColor === preset.color}
+                                    style="--swatch-color: {preset.color}"
+                                    on:click={() => handleAccentChange(preset.color)}
+                                    title={preset.name}
+                                >
+                                    {#if $theme.accentColor === preset.color}
+                                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                                            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                                        </svg>
+                                    {/if}
+                                </button>
+                            {/each}
+                        </div>
+                    </div>
+
+                    <!-- Custom Colors -->
+                    {#if $theme.customAccentColors.length > 0}
+                        <div class="setting-item">
+                            <span class="setting-label">Custom Colors</span>
+                            <div class="color-grid small">
+                                {#each $theme.customAccentColors as color}
+                                    <button 
+                                        class="color-swatch small"
+                                        class:active={$theme.accentColor === color}
+                                        style="--swatch-color: {color}"
+                                        on:click={() => handleAccentChange(color)}
+                                    >
+                                        {#if $theme.accentColor === color}
+                                            <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+                                                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                                            </svg>
+                                        {/if}
+                                    </button>
+                                {/each}
+                            </div>
+                        </div>
+                    {/if}
+
+                    <!-- Add Custom Color -->
+                    <div class="setting-item">
+                        <span class="setting-label">Add Custom Color</span>
+                        <div class="custom-color-input">
+                            <input 
+                                type="color" 
+                                bind:value={customColorInput}
+                                class="color-picker"
+                            />
+                            <input 
+                                type="text" 
+                                bind:value={customColorInput}
+                                placeholder="#1DB954"
+                                class="color-text"
+                                maxlength="7"
+                            />
+                            <button class="add-btn" on:click={handleCustomColorAdd}>
+                                Add
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- About -->
+                <section class="settings-section">
+                    <h3 class="section-title">About</h3>
+                    <div class="about-info">
+                        <div class="app-logo">
+                            <svg viewBox="0 0 24 24" fill="currentColor" width="32" height="32">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                            </svg>
+                            <span>Rlist</span>
+                        </div>
+                        <p class="version">Version 1.0.0</p>
+                        <p class="copyright">A modern music player built with Tauri & Svelte</p>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+{/if}
+
+<style>
+    .settings-overlay {
+        position: fixed;
+        inset: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 2000;
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .settings-panel {
+        width: 400px;
+        max-width: 100%;
+        height: 100%;
+        background-color: var(--bg-elevated);
+        display: flex;
+        flex-direction: column;
+        box-shadow: var(--shadow-lg);
+    }
+
+    .settings-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--spacing-lg);
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .settings-header h2 {
+        font-size: 1.25rem;
+        font-weight: 600;
+    }
+
+    .close-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: var(--radius-full);
+        color: var(--text-secondary);
+        transition: all var(--transition-fast);
+    }
+
+    .close-btn:hover {
+        color: var(--text-primary);
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .settings-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: var(--spacing-lg);
+    }
+
+    .settings-section {
+        margin-bottom: var(--spacing-xl);
+    }
+
+    .section-title {
+        font-size: 0.6875rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--text-subdued);
+        margin-bottom: var(--spacing-md);
+    }
+
+    .setting-item {
+        margin-bottom: var(--spacing-md);
+    }
+
+    .setting-label {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--text-primary);
+        margin-bottom: var(--spacing-xs);
+        display: block;
+    }
+
+    /* Theme Mode Buttons */
+    .theme-modes {
+        display: flex;
+        gap: var(--spacing-sm);
+    }
+
+    .mode-btn {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--spacing-xs);
+        padding: var(--spacing-md);
+        background-color: var(--bg-surface);
+        border-radius: var(--radius-md);
+        color: var(--text-secondary);
+        transition: all var(--transition-fast);
+        border: 2px solid transparent;
+    }
+
+    .mode-btn:hover {
+        background-color: var(--bg-highlight);
+        color: var(--text-primary);
+    }
+
+    .mode-btn.active {
+        border-color: var(--accent-primary);
+        color: var(--accent-primary);
+    }
+
+    .mode-btn span {
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    /* Color Grid */
+    .color-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: var(--spacing-sm);
+    }
+
+    .color-grid.small {
+        grid-template-columns: repeat(5, 1fr);
+    }
+
+    .color-swatch {
+        aspect-ratio: 1;
+        border-radius: var(--radius-md);
+        background-color: var(--swatch-color);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all var(--transition-fast);
+        border: 2px solid transparent;
+    }
+
+    .color-swatch:hover {
+        transform: scale(1.1);
+    }
+
+    .color-swatch.active {
+        border-color: var(--text-primary);
+        box-shadow: 0 0 0 2px var(--bg-base);
+    }
+
+    .color-swatch.small {
+        border-radius: var(--radius-sm);
+    }
+
+    .color-swatch svg {
+        color: white;
+        filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+    }
+
+    /* Custom Color Input */
+    .custom-color-input {
+        display: flex;
+        gap: var(--spacing-sm);
+        align-items: center;
+    }
+
+    .color-picker {
+        width: 40px;
+        height: 40px;
+        border: none;
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        padding: 0;
+    }
+
+    .color-picker::-webkit-color-swatch-wrapper {
+        padding: 0;
+    }
+
+    .color-picker::-webkit-color-swatch {
+        border: none;
+        border-radius: var(--radius-sm);
+    }
+
+    .color-text {
+        flex: 1;
+        padding: var(--spacing-sm) var(--spacing-md);
+        background-color: var(--bg-surface);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-sm);
+        color: var(--text-primary);
+        font-family: monospace;
+    }
+
+    .color-text:focus {
+        outline: none;
+        border-color: var(--accent-primary);
+    }
+
+    .add-btn {
+        padding: var(--spacing-sm) var(--spacing-md);
+        background-color: var(--accent-primary);
+        color: var(--bg-base);
+        font-weight: 600;
+        border-radius: var(--radius-sm);
+        transition: all var(--transition-fast);
+    }
+
+    .add-btn:hover {
+        background-color: var(--accent-hover);
+    }
+
+    /* About */
+    .about-info {
+        text-align: center;
+        padding: var(--spacing-lg);
+        background-color: var(--bg-surface);
+        border-radius: var(--radius-md);
+    }
+
+    .app-logo {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--spacing-sm);
+        color: var(--accent-primary);
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: var(--spacing-sm);
+    }
+
+    .version {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        margin-bottom: var(--spacing-xs);
+    }
+
+    .copyright {
+        font-size: 0.75rem;
+        color: var(--text-subdued);
+    }
+</style>

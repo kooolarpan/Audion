@@ -7,14 +7,23 @@
   import LyricsPanel from "$lib/components/LyricsPanel.svelte";
   import FullScreenPlayer from "$lib/components/FullScreenPlayer.svelte";
   import ContextMenu from "$lib/components/ContextMenu.svelte";
+  import QueuePanel from "$lib/components/QueuePanel.svelte";
+  import MiniPlayer from "$lib/components/MiniPlayer.svelte";
+  import ThemeSettings from "$lib/components/ThemeSettings.svelte";
   import { loadLibrary, loadPlaylists } from "$lib/stores/library";
   import { isTauri } from "$lib/api/tauri";
   import { initializeFromPersistedState, setupAutoSave } from "$lib/stores/persist";
+  import { theme } from "$lib/stores/theme";
+  import { isMiniPlayer } from "$lib/stores/ui";
 
   let isLoading = true;
   let notInTauri = false;
+  let audioElement: HTMLAudioElement | null = null;
 
   onMount(async () => {
+    // Initialize theme
+    theme.initialize();
+
     // Initialize persisted state (volume, lyrics visibility, etc.)
     initializeFromPersistedState();
     setupAutoSave();
@@ -45,7 +54,7 @@
             d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"
           />
         </svg>
-        <span>Rlist</span>
+        <span>Audion</span>
       </div>
       <p
         style="color: var(--text-primary); font-size: 1.1rem; margin-top: 1rem;"
@@ -77,10 +86,13 @@
       <Sidebar />
       <MainView />
       <LyricsPanel />
+      <QueuePanel />
       <FullScreenPlayer />
       <ContextMenu />
+      <ThemeSettings />
     </div>
-    <PlayerBar />
+    <PlayerBar bind:audioElementRef={audioElement} hidden={$isMiniPlayer} />
+    <MiniPlayer />
   {/if}
 </div>
 

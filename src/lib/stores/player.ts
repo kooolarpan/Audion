@@ -237,3 +237,72 @@ export const progress = derived(
         return $currentTime / $duration;
     }
 );
+
+// Queue management functions
+
+// Add tracks to end of queue
+export function addToQueue(tracks: Track[]): void {
+    queue.update(q => [...q, ...tracks]);
+}
+
+// Add track to play next (after current)
+export function addToQueueNext(track: Track): void {
+    queue.update(q => {
+        const idx = get(queueIndex);
+        const newQueue = [...q];
+        newQueue.splice(idx + 1, 0, track);
+        return newQueue;
+    });
+}
+
+// Remove track from queue by index
+export function removeFromQueue(index: number): void {
+    const currentIdx = get(queueIndex);
+    
+    queue.update(q => {
+        const newQueue = [...q];
+        newQueue.splice(index, 1);
+        return newQueue;
+    });
+    
+    // Adjust current index if needed
+    if (index < currentIdx) {
+        queueIndex.update(i => i - 1);
+    }
+}
+
+// Reorder queue (move track from one position to another)
+export function reorderQueue(fromIndex: number, toIndex: number): void {
+    const currentIdx = get(queueIndex);
+    
+    queue.update(q => {
+        const newQueue = [...q];
+        const [removed] = newQueue.splice(fromIndex, 1);
+        newQueue.splice(toIndex, 0, removed);
+        return newQueue;
+    });
+    
+    // Adjust current index
+    if (fromIndex === currentIdx) {
+        queueIndex.set(toIndex);
+    } else if (fromIndex < currentIdx && toIndex >= currentIdx) {
+        queueIndex.update(i => i - 1);
+    } else if (fromIndex > currentIdx && toIndex <= currentIdx) {
+        queueIndex.update(i => i + 1);
+    }
+}
+
+// Clear upcoming queue (keep history)
+export function clearUpcoming(): void {
+    const currentIdx = get(queueIndex);
+    queue.update(q => q.slice(0, currentIdx + 1));
+}
+
+// Play from specific index in queue
+export function playFromQueue(index: number): void {
+    const q = get(queue);
+    if (index >= 0 && index < q.length) {
+        queueIndex.set(index);
+        playTrack(q[index]);
+    }
+}

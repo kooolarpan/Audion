@@ -521,7 +521,6 @@
 
     .lyric-line.active {
         color: var(--text-primary);
-        font-size: 2.25rem;
         filter: blur(0px);
         text-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
     }
