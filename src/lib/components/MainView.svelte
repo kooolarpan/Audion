@@ -1,7 +1,11 @@
 <script lang="ts">
     import { currentView } from "$lib/stores/view";
     import { tracks, albums, artists } from "$lib/stores/library";
-    import { searchQuery, searchResults, clearSearch } from "$lib/stores/search";
+    import {
+        searchQuery,
+        searchResults,
+        clearSearch,
+    } from "$lib/stores/search";
 
     import TrackList from "./TrackList.svelte";
     import AlbumGrid from "./AlbumGrid.svelte";
@@ -11,6 +15,7 @@
     import PlaylistView from "./PlaylistView.svelte";
     import PlaylistDetail from "./PlaylistDetail.svelte";
     import SearchResults from "./SearchResults.svelte";
+    import PluginManager from "./PluginManager.svelte";
 
     let searchInput = "";
     let searchDebounceTimer: ReturnType<typeof setTimeout>;
@@ -18,7 +23,7 @@
     function handleSearchInput(e: Event) {
         const target = e.target as HTMLInputElement;
         searchInput = target.value;
-        
+
         clearTimeout(searchDebounceTimer);
         searchDebounceTimer = setTimeout(() => {
             searchQuery.set(searchInput);
@@ -43,8 +48,16 @@
     <!-- Search Bar -->
     <div class="search-bar">
         <div class="search-input-wrapper">
-            <svg class="search-icon" viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+            <svg
+                class="search-icon"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                width="20"
+                height="20"
+            >
+                <path
+                    d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"
+                />
             </svg>
             <input
                 type="text"
@@ -55,9 +68,20 @@
                 on:keydown={handleKeydown}
             />
             {#if searchInput}
-                <button class="clear-search" on:click={handleClearSearch} title="Clear search">
-                    <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                <button
+                    class="clear-search"
+                    on:click={handleClearSearch}
+                    title="Clear search"
+                >
+                    <svg
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                        width="18"
+                        height="18"
+                    >
+                        <path
+                            d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
+                        />
                     </svg>
                 </button>
             {/if}
@@ -115,6 +139,10 @@
     {:else if $currentView.type === "playlist-detail" && $currentView.id}
         <div class="view-container no-padding">
             <PlaylistDetail playlistId={$currentView.id} />
+        </div>
+    {:else if $currentView.type === "plugins"}
+        <div class="view-container no-padding">
+            <PluginManager />
         </div>
     {:else}
         <div class="view-container">

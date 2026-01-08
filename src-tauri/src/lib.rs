@@ -53,6 +53,16 @@ pub fn run() {
             commands::load_lrc_file,
             commands::delete_lrc_file,
             commands::musixmatch_request,
+            // Plugin commands
+            commands::list_plugins,
+            commands::install_plugin,
+            commands::uninstall_plugin,
+            commands::enable_plugin,
+            commands::disable_plugin,
+            commands::get_plugin_permissions,
+            commands::grant_permissions,
+            commands::revoke_permissions,
+            commands::get_plugin_dir,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
