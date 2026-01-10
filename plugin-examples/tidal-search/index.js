@@ -51,6 +51,33 @@
             setTimeout(() => this.createPlayerBarButton(), 500);
             setTimeout(() => this.createPlayerBarButton(), 1500);
 
+            // Register stream resolver for saved Tidal tracks
+            // This is called by the player when playing a track with source_type='tidal'
+            if (api.stream && api.stream.registerResolver) {
+                api.stream.registerResolver('tidal', async (externalId, options) => {
+                    console.log('[TidalSearch] Resolving stream for track ID:', externalId);
+                    try {
+                        const quality = options?.quality || 'LOSSLESS';
+                        let streamData = await this.fetchStream(externalId, quality);
+
+                        // Handle MPD fallback
+                        if (streamData?.data?.manifestMimeType === 'application/dash+xml') {
+                            streamData = await this.fetchStream(externalId, 'LOSSLESS');
+                            if (streamData?.data?.manifestMimeType === 'application/dash+xml') {
+                                streamData = await this.fetchStream(externalId, 'HIGH');
+                            }
+                        }
+
+                        const streamUrl = this.decodeManifest(streamData.data);
+                        return streamUrl;
+                    } catch (err) {
+                        console.error('[TidalSearch] Failed to resolve stream:', err);
+                        return null;
+                    }
+                });
+                console.log('[TidalSearch] Registered stream resolver for tidal');
+            }
+
             console.log('[TidalSearch] Plugin ready!');
         },
 
@@ -1478,7 +1505,7 @@
             return await response.json();
         },
 
-        // Complete saveTrack method - replace in your TidalSearch plugin
+        // Complete saveTrack method - saves static data only, URL is resolved on play
 
         async saveTrack(track, button) {
             console.log('[TidalSearch] Adding track to library:', track.title);
@@ -1499,9 +1526,10 @@
 
                 // Check if API is available
                 if (this.api?.library?.addExternalTrack) {
-                    console.log('[TidalSearch] Using addExternalTrack API');
+                    console.log('[TidalSearch] Saving static metadata (URL resolved on play)');
 
-                    // Add track to database (no download needed)
+                    // Add track to database with static metadata only
+                    // Path will be "tidal://{id}" - stream URL fetched fresh on play
                     const trackData = {
                         title: title,
                         artist: artistName,
@@ -1509,9 +1537,10 @@
                         duration: track.duration || null,
                         cover_url: coverUrl,
                         source_type: 'tidal',
-                        external_id: String(track.id),
+                        external_id: String(track.id),  // Used to fetch stream on play
                         format: quality,
                         bitrate: null
+                        // No stream_url - resolved on play for freshness
                     };
 
                     await this.api.library.addExternalTrack(trackData);
@@ -1521,74 +1550,10 @@
                     button.classList.add('saved');
 
                     this.showToast(`✓ Added to library: ${title}`);
-                    console.log('[TidalSearch] Track added to library:', trackData);
+                    console.log('[TidalSearch] Track saved:', trackData);
 
                 } else {
-                    // Fallback: use old download method if addExternalTrack not available
-                    console.log('[TidalSearch] addExternalTrack not available, falling back to download');
-
-                    // Get quality selection
-                    const progressBar = document.getElementById('tidal-download-progress');
-                    const progressText = progressBar?.querySelector('.tidal-download-progress-text');
-
-                    if (progressBar) {
-                        progressBar.classList.remove('hidden');
-                        if (progressText) progressText.textContent = `Preparing download: ${title}`;
-                    }
-
-                    // Fetch stream URL
-                    let streamData = await this.fetchStream(track.id, quality);
-
-                    // Handle MPD fallback
-                    if (streamData?.data?.manifestMimeType === 'application/dash+xml') {
-                        streamData = await this.fetchStream(track.id, 'LOSSLESS');
-                        if (streamData?.data?.manifestMimeType === 'application/dash+xml') {
-                            streamData = await this.fetchStream(track.id, 'HIGH');
-                        }
-                    }
-
-                    const streamUrl = this.decodeManifest(streamData.data);
-                    if (!streamUrl) {
-                        throw new Error('Could not get stream URL');
-                    }
-
-                    // Create filename
-                    const safeTitle = title.replace(/[<>:"/\\|?*]/g, '_');
-                    const safeArtist = artistName.replace(/[<>:"/\\|?*]/g, '_');
-                    const extension = (streamData?.data?.audioQuality === 'HIGH' || streamData?.data?.audioQuality === 'LOW')
-                        ? 'aac' : 'flac';
-                    const filename = `${safeArtist} - ${safeTitle}.${extension}`;
-
-                    if (this.api?.library?.downloadTrack) {
-                        const downloadOptions = {
-                            url: streamUrl,
-                            filename: filename,
-                            metadata: {
-                                title: title,
-                                artist: artistName,
-                                album: track.album?.title || null,
-                                trackNumber: track.trackNumber || null,
-                                coverUrl: coverUrl
-                            }
-                        };
-
-                        if (this.downloadPath) {
-                            downloadOptions.path = this.downloadPath.replace(/[\/\\]+$/, '');
-                        }
-
-                        const savedPath = await this.api.library.downloadTrack(downloadOptions);
-
-                        if (progressText) progressText.textContent = `Saved: ${savedPath}`;
-                        setTimeout(() => {
-                            if (progressBar) progressBar.classList.add('hidden');
-                        }, 2500);
-
-                        button.classList.remove('saving');
-                        button.classList.add('saved');
-                        this.showToast(`✓ Downloaded: ${title}`);
-                    } else {
-                        throw new Error('No library API available');
-                    }
+                    throw new Error('Library API not available');
                 }
 
             } catch (err) {

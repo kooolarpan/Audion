@@ -58,6 +58,10 @@ export class PluginRuntime {
   private grantedPermissions: Map<string, string[]> = new Map();
   private config: PluginRuntimeConfig;
 
+  // Stream resolvers: map of source_type -> resolver function
+  // Resolver takes (external_id, options?) and returns Promise<string | null> (stream URL)
+  streamResolvers: Map<string, (externalId: string, options?: any) => Promise<string | null>> = new Map();
+
   constructor(config: PluginRuntimeConfig) {
     this.config = config;
   }
@@ -404,7 +408,7 @@ export class PluginRuntime {
         });
 
       case 'library.addExternalTrack':
-        // args: [trackData: { title, artist, album?, duration?, cover_url?, source_type, external_id, format?, bitrate? }]
+        // args: [trackData: { title, artist, album?, duration?, cover_url?, source_type, external_id, format?, bitrate?, stream_url }]
         const trackData = args[0];
         if (!trackData || !trackData.title || !trackData.artist || !trackData.source_type || !trackData.external_id) {
           console.warn(`[PluginRuntime] Invalid external track data`);
@@ -422,7 +426,8 @@ export class PluginRuntime {
             source_type: trackData.source_type,
             external_id: trackData.external_id,
             format: trackData.format || null,
-            bitrate: trackData.bitrate || null
+            bitrate: trackData.bitrate || null,
+            stream_url: trackData.stream_url || null  // The decoded stream URL
           }
         });
 
@@ -554,6 +559,22 @@ export class PluginRuntime {
       };
     }
 
+    // Stream resolver registration (for external tracks like Tidal)
+    // Plugins with player:control permission can register resolvers
+    if (this.hasPermission(pluginName, 'player:control')) {
+      api.stream = {
+        // Register a resolver function for a source type (e.g., 'tidal')
+        // Resolver: (externalId: string, options?: {quality?: string}) => Promise<string | null>
+        registerResolver: (sourceType: string, resolver: (externalId: string, options?: any) => Promise<string | null>) => {
+          this.streamResolvers.set(sourceType, resolver);
+          console.log(`[PluginRuntime] Registered stream resolver for '${sourceType}' from plugin '${pluginName}'`);
+        },
+        unregisterResolver: (sourceType: string) => {
+          this.streamResolvers.delete(sourceType);
+        }
+      };
+    }
+
     return api;
   }
 
@@ -658,5 +679,25 @@ export class PluginRuntime {
   // Get a specific plugin
   getPlugin(name: string): LoadedPlugin | undefined {
     return this.plugins.get(name);
+  }
+
+  // Resolve stream URL for external tracks
+  // Called by player.ts before playing a track with source_type != 'local'
+  async resolveStreamUrl(sourceType: string, externalId: string, options?: any): Promise<string | null> {
+    const resolver = this.streamResolvers.get(sourceType);
+    if (!resolver) {
+      console.warn(`[PluginRuntime] No stream resolver registered for source type '${sourceType}'`);
+      return null;
+    }
+
+    try {
+      console.log(`[PluginRuntime] Resolving stream URL for ${sourceType}://${externalId}`);
+      const url = await resolver(externalId, options);
+      console.log(`[PluginRuntime] Resolved stream URL:`, url ? url.substring(0, 50) + '...' : 'null');
+      return url;
+    } catch (error) {
+      console.error(`[PluginRuntime] Failed to resolve stream URL:`, error);
+      return null;
+    }
   }
 }

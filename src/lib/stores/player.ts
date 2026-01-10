@@ -129,14 +129,25 @@ export async function playTrack(track: Track): Promise<void> {
 
             // Check if this is an external streaming track
             if (track.source_type && track.source_type !== 'local') {
-                // For external tracks (tidal, url, etc.), the path is already a URL
-                // or we need to fetch a fresh stream URL if it's a source-specific ID
-                if (track.path.startsWith('http://') || track.path.startsWith('https://')) {
+                // External track - need to resolve stream URL via plugin
+                const { pluginStore } = await import('./plugin-store');
+                const runtime = pluginStore.getRuntime();
+
+                if (runtime && track.external_id) {
+                    // Resolve fresh stream URL
+                    const streamUrl = await runtime.resolveStreamUrl(track.source_type, track.external_id);
+                    if (streamUrl) {
+                        src = streamUrl;
+                    } else {
+                        console.error('Failed to resolve stream URL for:', track.source_type, track.external_id);
+                        return;
+                    }
+                } else if (track.path.startsWith('http://') || track.path.startsWith('https://')) {
+                    // Fallback: path is already a URL
                     src = track.path;
                 } else {
-                    // Path is like "tidal://12345" - we'll need to resolve it
-                    // For now, just use the path directly (plugin will set the actual URL)
-                    src = track.path;
+                    console.error('Cannot play external track: no resolver available or path is not a URL');
+                    return;
                 }
             } else {
                 // Local file - convert file path to asset URL

@@ -333,6 +333,11 @@ function createPluginStore() {
         getInstalledPlugin(name: string): PluginInfo | undefined {
             const state = get({ subscribe });
             return state.installed.find(p => p.name === name);
+        },
+
+        // Get runtime for stream resolution
+        getRuntime(): PluginRuntime | null {
+            return runtime;
         }
     };
 }

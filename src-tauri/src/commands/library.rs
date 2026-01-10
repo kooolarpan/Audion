@@ -197,10 +197,12 @@ pub struct ExternalTrackInput {
     pub external_id: String, // Source-specific ID (e.g., Tidal track ID)
     pub format: Option<String>,
     pub bitrate: Option<i32>,
+    pub stream_url: Option<String>, // The decoded stream URL
 }
 
 /// Add an external (streaming) track to the library
-/// The path will be constructed as "{source_type}://{external_id}" for uniqueness
+/// If stream_url is provided, use it as the path (for direct playback)
+/// Otherwise, construct path as "{source_type}://{external_id}" for uniqueness
 #[tauri::command]
 pub async fn add_external_track(
     track: ExternalTrackInput,
@@ -208,8 +210,11 @@ pub async fn add_external_track(
 ) -> Result<i64, String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
 
-    // Construct a unique path using source_type and external_id
-    let path = format!("{}://{}", track.source_type, track.external_id);
+    // Use stream_url as path if provided, otherwise construct from source_type://external_id
+    let path = track
+        .stream_url
+        .clone()
+        .unwrap_or_else(|| format!("{}://{}", track.source_type, track.external_id));
 
     let track_insert = queries::TrackInsert {
         path,
