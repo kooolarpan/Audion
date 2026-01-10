@@ -1,52 +1,80 @@
 <script lang="ts">
     import type { Track } from "$lib/api/tauri";
-    import { formatDuration, getAlbumArtSrc, addTrackToPlaylist } from "$lib/api/tauri";
-    import { playTracks, currentTrack, isPlaying, addToQueue } from "$lib/stores/player";
+    import {
+        formatDuration,
+        getAlbumArtSrc,
+        addTrackToPlaylist,
+        deleteTrack,
+    } from "$lib/api/tauri";
+    import {
+        playTracks,
+        currentTrack,
+        isPlaying,
+        addToQueue,
+    } from "$lib/stores/player";
     import { contextMenu } from "$lib/stores/ui";
     import { albums, playlists, loadPlaylists } from "$lib/stores/library";
+    import { pluginStore } from "$lib/stores/plugin-store";
 
     export let tracks: Track[] = [];
     export let title: string = "Tracks";
     export let showAlbum: boolean = true;
 
+    // Filter out external tracks if their source plugin isn't enabled
+    $: filteredTracks = tracks.filter((track) => {
+        // Local tracks are always shown
+        if (!track.source_type || track.source_type === "local") {
+            return true;
+        }
+        // External tracks: check if a resolver is registered
+        const runtime = pluginStore.getRuntime();
+        if (!runtime) return false;
+        return runtime.streamResolvers.has(track.source_type);
+    });
+
     // Create a map of album_id to album for quick lookup
-    $: albumMap = new Map($albums.map(a => [a.id, a]));
+    $: albumMap = new Map($albums.map((a) => [a.id, a]));
 
     function getTrackAlbumArt(track: Track): string | null {
+        // For external tracks (Tidal, etc.), use cover_url directly
+        if (track.cover_url) {
+            return track.cover_url;
+        }
+        // For local tracks, get art from album
         if (!track.album_id) return null;
         const album = albumMap.get(track.album_id);
         return album ? getAlbumArtSrc(album.art_data) : null;
     }
 
     function handleTrackClick(index: number) {
-        playTracks(tracks, index);
+        playTracks(filteredTracks, index);
     }
 
     function handleTrackDoubleClick(index: number) {
-        playTracks(tracks, index);
+        playTracks(filteredTracks, index);
     }
 
     async function handleContextMenu(e: MouseEvent, index: number) {
         e.preventDefault();
         const track = tracks[index];
-        
+
         // Ensure playlists are loaded
         if ($playlists.length === 0) {
             await loadPlaylists();
         }
-        
+
         // Build playlist submenu items
-        const playlistItems = $playlists.map(playlist => ({
+        const playlistItems = $playlists.map((playlist) => ({
             label: playlist.name,
             action: async () => {
                 try {
                     await addTrackToPlaylist(playlist.id, track.id);
                 } catch (error) {
-                    console.error('Failed to add track to playlist:', error);
+                    console.error("Failed to add track to playlist:", error);
                 }
             },
         }));
-        
+
         contextMenu.set({
             visible: true,
             x: e.clientX,
@@ -54,7 +82,7 @@
             items: [
                 {
                     label: "Play",
-                    action: () => playTracks(tracks, index),
+                    action: () => playTracks(filteredTracks, index),
                 },
                 { type: "separator" },
                 {
@@ -64,9 +92,29 @@
                 { type: "separator" },
                 {
                     label: "Add to Playlist",
-                    submenu: playlistItems.length > 0 ? playlistItems : [
-                        { label: "No playlists", action: () => {}, disabled: true }
-                    ],
+                    submenu:
+                        playlistItems.length > 0
+                            ? playlistItems
+                            : [
+                                  {
+                                      label: "No playlists",
+                                      action: () => {},
+                                      disabled: true,
+                                  },
+                              ],
+                },
+                { type: "separator" },
+                {
+                    label: "Delete from Library",
+                    action: async () => {
+                        try {
+                            await deleteTrack(track.id);
+                            // Remove from local tracks array
+                            tracks = tracks.filter((t) => t.id !== track.id);
+                        } catch (error) {
+                            console.error("Failed to delete track:", error);
+                        }
+                    },
                 },
             ],
         });
@@ -91,7 +139,7 @@
     </header>
 
     <div class="list-body">
-        {#each tracks as track, index}
+        {#each filteredTracks as track, index}
             {@const albumArt = getTrackAlbumArt(track)}
             <button
                 class="track-row"
@@ -129,13 +177,25 @@
                             />
                         {:else}
                             <div class="cover-placeholder">
-                                <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-                                    <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
+                                <svg
+                                    viewBox="0 0 24 24"
+                                    fill="currentColor"
+                                    width="16"
+                                    height="16"
+                                >
+                                    <path
+                                        d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"
+                                    />
                                 </svg>
                             </div>
                         {/if}
                         <div class="cover-play-overlay">
-                            <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                            <svg
+                                viewBox="0 0 24 24"
+                                fill="currentColor"
+                                width="18"
+                                height="18"
+                            >
                                 <path d="M8 5v14l11-7z" />
                             </svg>
                         </div>

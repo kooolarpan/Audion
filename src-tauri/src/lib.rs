@@ -42,6 +42,7 @@ pub fn run() {
             commands::get_album,
             commands::get_albums_by_artist,
             commands::add_external_track,
+            commands::delete_track,
             // Playlist commands
             commands::create_playlist,
             commands::get_playlists,

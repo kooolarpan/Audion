@@ -76,6 +76,13 @@
                         alt={album.name}
                         decoding="async"
                     />
+                {:else if tracks.length > 0 && tracks[0].cover_url}
+                    <!-- Fallback: use first track's cover_url (for external tracks) -->
+                    <img
+                        src={tracks[0].cover_url}
+                        alt={album.name}
+                        decoding="async"
+                    />
                 {:else}
                     <div class="album-cover-placeholder">
                         <svg

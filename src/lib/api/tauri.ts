@@ -131,6 +131,10 @@ export async function addExternalTrack(track: ExternalTrackInput): Promise<numbe
     return await invoke('add_external_track', { track });
 }
 
+export async function deleteTrack(trackId: number): Promise<boolean> {
+    return await invoke('delete_track', { trackId });
+}
+
 // Playlist commands
 export async function createPlaylist(name: string): Promise<number> {
     return await invoke('create_playlist', { name });

@@ -2,8 +2,23 @@
     import type { Album } from "$lib/api/tauri";
     import { getAlbumArtSrc } from "$lib/api/tauri";
     import { goToAlbumDetail } from "$lib/stores/view";
+    import { tracks as allTracks } from "$lib/stores/library";
 
     export let albums: Album[] = [];
+
+    // Get album cover - use track's cover_url for external tracks (same as TrackList)
+    function getAlbumCover(album: Album): string | null {
+        // First check if album has embedded art
+        if (album.art_data) {
+            return getAlbumArtSrc(album.art_data);
+        }
+
+        // Fallback: find a track with cover_url for this album
+        const albumTrack = $allTracks.find(
+            (t) => t.album_id === album.id && t.cover_url,
+        );
+        return albumTrack?.cover_url || null;
+    }
 
     function handleAlbumClick(album: Album) {
         goToAlbumDetail(album.id);
@@ -12,11 +27,12 @@
 
 <div class="album-grid">
     {#each albums as album}
+        {@const coverSrc = getAlbumCover(album)}
         <button class="album-card" on:click={() => handleAlbumClick(album)}>
             <div class="album-art">
-                {#if album.art_data}
+                {#if coverSrc}
                     <img
-                        src={getAlbumArtSrc(album.art_data)}
+                        src={coverSrc}
                         alt={album.name}
                         loading="lazy"
                         decoding="async"

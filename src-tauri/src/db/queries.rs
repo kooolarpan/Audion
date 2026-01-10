@@ -106,6 +106,12 @@ pub fn insert_or_update_track(conn: &Connection, track: &TrackInsert) -> Result<
     Ok(conn.last_insert_rowid())
 }
 
+/// Delete a track from the database by ID
+pub fn delete_track(conn: &Connection, track_id: i64) -> Result<bool> {
+    let deleted = conn.execute("DELETE FROM tracks WHERE id = ?1", params![track_id])?;
+    Ok(deleted > 0)
+}
+
 fn get_or_create_album(
     conn: &Connection,
     name: &str,

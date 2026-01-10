@@ -1,17 +1,45 @@
 <script lang="ts">
-    import { searchResults, searchQuery, clearSearch } from "$lib/stores/search";
+    import {
+        searchResults,
+        searchQuery,
+        clearSearch,
+    } from "$lib/stores/search";
     import { goToAlbumDetail, goToArtistDetail } from "$lib/stores/view";
     import { playTracks } from "$lib/stores/player";
     import { getAlbumArtSrc } from "$lib/api/tauri";
-    import { albums } from "$lib/stores/library";
+    import { albums, tracks as allTracks } from "$lib/stores/library";
 
     // Create album map for track art lookup
-    $: albumMap = new Map($albums.map(a => [a.id, a]));
+    $: albumMap = new Map($albums.map((a) => [a.id, a]));
 
-    function getTrackAlbumArt(albumId: number | null): string | null {
-        if (!albumId) return null;
-        const album = albumMap.get(albumId);
+    // Get track art - check cover_url first (for external), then album art
+    function getTrackArt(track: {
+        album_id?: number | null;
+        cover_url?: string | null;
+    }): string | null {
+        // External tracks use cover_url directly
+        if (track.cover_url) {
+            return track.cover_url;
+        }
+        // Local tracks get art from album
+        if (!track.album_id) return null;
+        const album = albumMap.get(track.album_id);
         return album ? getAlbumArtSrc(album.art_data) : null;
+    }
+
+    // Get album cover - check art_data first, then find track with cover_url
+    function getAlbumCover(album: {
+        id: number;
+        art_data?: string | null;
+    }): string | null {
+        if (album.art_data) {
+            return getAlbumArtSrc(album.art_data);
+        }
+        // Fallback: find a track with cover_url for this album
+        const albumTrack = $allTracks.find(
+            (t) => t.album_id === album.id && t.cover_url,
+        );
+        return albumTrack?.cover_url || null;
     }
 
     function handleTrackClick(index: number) {
@@ -37,7 +65,9 @@
     {#if !$searchResults.hasResults && $searchQuery}
         <div class="no-results">
             <svg viewBox="0 0 24 24" fill="currentColor" width="48" height="48">
-                <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+                <path
+                    d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"
+                />
             </svg>
             <h3>No results found</h3>
             <p>Try searching for something else</p>
@@ -46,30 +76,53 @@
         <!-- Tracks Section -->
         {#if $searchResults.tracks.length > 0}
             <section class="result-section">
-                <h2 class="section-title">Tracks ({$searchResults.tracks.length})</h2>
+                <h2 class="section-title">
+                    Tracks ({$searchResults.tracks.length})
+                </h2>
                 <div class="tracks-list">
                     {#each $searchResults.tracks.slice(0, 10) as track, index}
-                        {@const albumArt = getTrackAlbumArt(track.album_id)}
-                        <button class="track-item" on:click={() => handleTrackClick(index)}>
+                        {@const albumArt = getTrackArt(track)}
+                        <button
+                            class="track-item"
+                            on:click={() => handleTrackClick(index)}
+                        >
                             <div class="track-art">
                                 {#if albumArt}
-                                    <img src={albumArt} alt="" loading="lazy" decoding="async" />
+                                    <img
+                                        src={albumArt}
+                                        alt=""
+                                        loading="lazy"
+                                        decoding="async"
+                                    />
                                 {:else}
                                     <div class="art-placeholder">
-                                        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-                                            <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
+                                        <svg
+                                            viewBox="0 0 24 24"
+                                            fill="currentColor"
+                                            width="16"
+                                            height="16"
+                                        >
+                                            <path
+                                                d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"
+                                            />
                                         </svg>
                                     </div>
                                 {/if}
                             </div>
                             <div class="track-info">
-                                <span class="track-title truncate">{track.title || "Unknown Title"}</span>
-                                <span class="track-artist truncate">{track.artist || "Unknown Artist"}</span>
+                                <span class="track-title truncate"
+                                    >{track.title || "Unknown Title"}</span
+                                >
+                                <span class="track-artist truncate"
+                                    >{track.artist || "Unknown Artist"}</span
+                                >
                             </div>
                         </button>
                     {/each}
                     {#if $searchResults.tracks.length > 10}
-                        <p class="more-results">And {$searchResults.tracks.length - 10} more tracks...</p>
+                        <p class="more-results">
+                            And {$searchResults.tracks.length - 10} more tracks...
+                        </p>
                     {/if}
                 </div>
             </section>
@@ -78,24 +131,46 @@
         <!-- Albums Section -->
         {#if $searchResults.albums.length > 0}
             <section class="result-section">
-                <h2 class="section-title">Albums ({$searchResults.albums.length})</h2>
+                <h2 class="section-title">
+                    Albums ({$searchResults.albums.length})
+                </h2>
                 <div class="albums-grid">
                     {#each $searchResults.albums.slice(0, 6) as album}
-                        <button class="album-card" on:click={() => handleAlbumClick(album.id)}>
+                        {@const coverSrc = getAlbumCover(album)}
+                        <button
+                            class="album-card"
+                            on:click={() => handleAlbumClick(album.id)}
+                        >
                             <div class="album-art">
-                                {#if album.art_data}
-                                    <img src={getAlbumArtSrc(album.art_data)} alt={album.name} loading="lazy" decoding="async" />
+                                {#if coverSrc}
+                                    <img
+                                        src={coverSrc}
+                                        alt={album.name}
+                                        loading="lazy"
+                                        decoding="async"
+                                    />
                                 {:else}
                                     <div class="art-placeholder">
-                                        <svg viewBox="0 0 24 24" fill="currentColor" width="32" height="32">
-                                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 14.5c-2.49 0-4.5-2.01-4.5-4.5S9.51 7.5 12 7.5s4.5 2.01 4.5 4.5-2.01 4.5-4.5 4.5zm0-5.5c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1z" />
+                                        <svg
+                                            viewBox="0 0 24 24"
+                                            fill="currentColor"
+                                            width="32"
+                                            height="32"
+                                        >
+                                            <path
+                                                d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 14.5c-2.49 0-4.5-2.01-4.5-4.5S9.51 7.5 12 7.5s4.5 2.01 4.5 4.5-2.01 4.5-4.5 4.5zm0-5.5c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1z"
+                                            />
                                         </svg>
                                     </div>
                                 {/if}
                             </div>
                             <div class="album-info">
-                                <span class="album-name truncate">{album.name}</span>
-                                <span class="album-artist truncate">{album.artist || "Unknown Artist"}</span>
+                                <span class="album-name truncate"
+                                    >{album.name}</span
+                                >
+                                <span class="album-artist truncate"
+                                    >{album.artist || "Unknown Artist"}</span
+                                >
                             </div>
                         </button>
                     {/each}
@@ -106,16 +181,28 @@
         <!-- Artists Section -->
         {#if $searchResults.artists.length > 0}
             <section class="result-section">
-                <h2 class="section-title">Artists ({$searchResults.artists.length})</h2>
+                <h2 class="section-title">
+                    Artists ({$searchResults.artists.length})
+                </h2>
                 <div class="artists-grid">
                     {#each $searchResults.artists.slice(0, 6) as artist}
-                        <button class="artist-card" on:click={() => handleArtistClick(artist.name)}>
+                        <button
+                            class="artist-card"
+                            on:click={() => handleArtistClick(artist.name)}
+                        >
                             <div class="artist-avatar">
-                                <span class="artist-initial">{getArtistInitial(artist.name)}</span>
+                                <span class="artist-initial"
+                                    >{getArtistInitial(artist.name)}</span
+                                >
                             </div>
                             <div class="artist-info">
-                                <span class="artist-name truncate">{artist.name}</span>
-                                <span class="artist-meta">{artist.album_count} albums • {artist.track_count} songs</span>
+                                <span class="artist-name truncate"
+                                    >{artist.name}</span
+                                >
+                                <span class="artist-meta"
+                                    >{artist.album_count} albums • {artist.track_count}
+                                    songs</span
+                                >
                             </div>
                         </button>
                     {/each}
@@ -308,7 +395,11 @@
         width: 80px;
         height: 80px;
         border-radius: var(--radius-full);
-        background: linear-gradient(135deg, var(--accent-primary) 0%, #1a1a1a 100%);
+        background: linear-gradient(
+            135deg,
+            var(--accent-primary) 0%,
+            #1a1a1a 100%
+        );
         display: flex;
         align-items: center;
         justify-content: center;

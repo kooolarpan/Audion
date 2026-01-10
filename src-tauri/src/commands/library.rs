@@ -185,6 +185,13 @@ pub async fn get_albums_by_artist(
     Ok(albums)
 }
 
+/// Delete a track from the library
+#[tauri::command]
+pub async fn delete_track(track_id: i64, db: State<'_, Database>) -> Result<bool, String> {
+    let conn = db.conn.lock().map_err(|e| e.to_string())?;
+    queries::delete_track(&conn, track_id).map_err(|e| format!("Failed to delete track: {}", e))
+}
+
 /// Input for adding an external (streaming) track to the library
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ExternalTrackInput {
