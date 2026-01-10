@@ -9,7 +9,9 @@
         "network:fetch",
         "ui:inject",
         "player:control",
-        "library:write"
+        "library:write",
+        "settings:write",
+        "library:downloadTrack"
     ],
     "category": "library",
     "tags": [

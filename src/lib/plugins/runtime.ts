@@ -358,21 +358,26 @@ export class PluginRuntime {
         }
       // Library Write APIs
       case 'library.downloadTrack':
-        // args: [options: { url, filename, metadata }]
+        // args: [options: { url, filename, metadata, downloadPath? }]
         const options = args[0];
         if (!options || !options.url || !options.filename) {
           console.warn(`[PluginRuntime] Invalid download options`);
           return null;
         }
 
-        // Get global download location
-        const downloadLocation = get(appSettings).downloadLocation;
-        if (!downloadLocation) {
-          console.warn(`[PluginRuntime] No download location set`);
+        // Determine target directory: prefer plugin-provided path, fallback to global app setting
+        const globalDownloadLocation = get(appSettings).downloadLocation;
+        const requestedPath = options.downloadPath && typeof options.downloadPath === 'string' && options.downloadPath.trim() !== ''
+          ? options.downloadPath
+          : null;
+        const targetDir = requestedPath || globalDownloadLocation;
+
+        if (!targetDir) {
+          console.warn(`[PluginRuntime] No download location set (neither plugin nor app settings)`);
           throw new Error('No download location configured in settings');
         }
 
-        const fullPath = `${downloadLocation}/${options.filename}`;
+        const fullPath = `${targetDir}/${options.filename}`;
 
         // Call Rust command
         return invoke('download_and_save_audio', {
@@ -386,14 +391,27 @@ export class PluginRuntime {
             cover_url: options.metadata?.coverUrl || null
           }
         }).then(async (savedPath) => {
-          // Auto-rescan library
+          // Auto-rescan library for the directory actually used
           try {
-            await invoke('scan_music', { paths: [downloadLocation] });
+            await invoke('scan_music', { paths: [targetDir] });
           } catch (e) {
             console.warn('[PluginRuntime] Auto-rescan failed', e);
           }
           return savedPath;
         });
+
+      case 'settings.setDownloadLocation':
+        // args: [path]
+        try {
+          const newPath = args[0] || null;
+          if (typeof (appSettings as any).setDownloadLocation === 'function') {
+            (appSettings as any).setDownloadLocation(newPath);
+            return true;
+          }
+        } catch (err) {
+          console.warn('[PluginRuntime] Failed to set download location', err);
+        }
+        return false;
 
       default:
         console.warn(`[PluginRuntime] Unknown host method: ${method}`);
@@ -479,6 +497,13 @@ export class PluginRuntime {
       api.storage = {
         get: (key: string) => this.callHost(pluginName, 'storage.get', key),
         set: (key: string, value: any) => this.callHost(pluginName, 'storage.set', key, value)
+      };
+    }
+
+    // Allow plugins to update certain app settings (download location)
+    if (this.hasPermission(pluginName, 'settings:write') || this.hasPermission(pluginName, 'storage:local')) {
+      api.settings = {
+        setDownloadLocation: (path: string | null) => this.callHost(pluginName, 'settings.setDownloadLocation', path)
       };
     }
 

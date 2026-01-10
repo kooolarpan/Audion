@@ -33,6 +33,13 @@
             console.log('[TidalSearch] Initializing...');
             this.api = api;
 
+            // Load saved download path from settings
+            this.loadDownloadPath();
+            // Try to restore any persisted directory handle (non-blocking)
+            if (typeof indexedDB !== 'undefined') {
+                this.restoreDirectoryHandle().catch(() => {});
+            }
+
             // Inject styles
             this.injectStyles();
 
@@ -45,6 +52,36 @@
             setTimeout(() => this.createPlayerBarButton(), 1500);
 
             console.log('[TidalSearch] Plugin ready!');
+        },
+
+        // Load saved download path from settings or localStorage
+        loadDownloadPath() {
+            try {
+                // Try to get from plugin API settings
+                if (this.api && this.api.settings && typeof this.api.settings.getDownloadLocation === 'function') {
+                    this.downloadPath = this.api.settings.getDownloadLocation();
+                    console.log('[TidalSearch] Loaded download path from API:', this.downloadPath);
+                    return;
+                }
+                
+                // Fallback to localStorage
+                const stored = localStorage.getItem('audion_settings');
+                if (stored) {
+                    const settings = JSON.parse(stored);
+                    if (settings.downloadLocation) {
+                        this.downloadPath = settings.downloadLocation;
+                        console.log('[TidalSearch] Loaded download path from localStorage:', this.downloadPath);
+                        return;
+                    }
+                }
+                
+                // No saved path found
+                this.downloadPath = null;
+                console.log('[TidalSearch] No saved download path, will use browser downloads');
+            } catch (err) {
+                console.warn('[TidalSearch] Could not load download path:', err);
+                this.downloadPath = null;
+            }
         },
 
         // Get download path from native app settings (Tauri)
@@ -66,6 +103,75 @@
             } else {
                 return `${window.process?.env?.HOME || ''}/Music`;
             }
+        },
+
+        // Persist and restore directory handles using IndexedDB so user selection
+        // survives across reloads (where supported).
+        async _idbOpen() {
+            return new Promise((resolve, reject) => {
+                const req = indexedDB.open('tidal-search-store', 1);
+                req.onupgradeneeded = () => {
+                    req.result.createObjectStore('state');
+                };
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
+            });
+        },
+
+        async _idbPut(key, value) {
+            const db = await this._idbOpen();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction('state', 'readwrite');
+                tx.objectStore('state').put(value, key);
+                tx.oncomplete = () => { db.close(); resolve(); };
+                tx.onerror = () => { db.close(); reject(tx.error); };
+            });
+        },
+
+        async _idbGet(key) {
+            const db = await this._idbOpen();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction('state', 'readonly');
+                const req = tx.objectStore('state').get(key);
+                req.onsuccess = () => { db.close(); resolve(req.result); };
+                req.onerror = () => { db.close(); reject(req.error); };
+            });
+        },
+
+        async persistDirectoryHandle(handle) {
+            try {
+                if (!handle) return;
+                await this._idbPut('directoryHandle', handle);
+                console.log('[TidalSearch] Persisted directory handle');
+            } catch (err) {
+                console.warn('[TidalSearch] Could not persist directory handle:', err);
+            }
+        },
+
+        async restoreDirectoryHandle() {
+            try {
+                const handle = await this._idbGet('directoryHandle');
+                if (handle) {
+                    this.directoryHandle = handle;
+                    // Only query permission here — requesting permission requires a user gesture
+                    if (typeof handle.queryPermission === 'function') {
+                        const perm = await handle.queryPermission({ mode: 'readwrite' });
+                        if (perm === 'granted') {
+                            console.log('[TidalSearch] Restored directory handle with permission');
+                            return true;
+                        } else {
+                            console.log('[TidalSearch] Restored directory handle but no write permission:', perm);
+                            return false;
+                        }
+                    }
+
+                    // If permission APIs are not available, assume handle is usable
+                    return true;
+                }
+            } catch (err) {
+                console.warn('[TidalSearch] Could not restore directory handle:', err);
+            }
+            return false;
         },
 
         // ═══════════════════════════════════════════════════════════════════════
@@ -757,6 +863,9 @@
                     <span class="tidal-settings-label">📁 Save to:</span>
                     <input type="text" class="tidal-path-input" id="tidal-download-path" placeholder="Leave empty for browser downloads">
                     <button class="tidal-browse-btn" id="tidal-browse-btn">Browse</button>
+                    <div id="tidal-api-warning" class="tidal-api-warning" style="display:none;margin-top:8px;font-size:12px;color:var(--text-subdued);">
+                        Host integration not available — the host cannot write files directly. Click the button to pick a folder the browser can save to, or run the plugin inside the desktop app for full integration.
+                    </div>
                 </div>
                 <div class="tidal-search-controls">
                     <input type="text" class="tidal-search-input" placeholder="Search for tracks or artists..." autofocus>
@@ -792,10 +901,25 @@
             panel.querySelector('.tidal-settings-btn').onclick = () => this.toggleSettings();
             panel.querySelector('#tidal-browse-btn').onclick = () => this.browseForFolder();
 
-            // Update path input with saved value
+            // Show API warning when host integration is unavailable
+            const apiWarningEl = panel.querySelector('#tidal-api-warning');
+            if (apiWarningEl) {
+                if (!this.api || !this.api.library || typeof this.api.library.downloadTrack !== 'function') {
+                    apiWarningEl.style.display = 'block';
+                } else {
+                    apiWarningEl.style.display = 'none';
+                }
+            }
+
+            // Update path input with saved value or computed default
             const pathInput = panel.querySelector('#tidal-download-path');
             if (this.downloadPath) {
                 pathInput.value = this.downloadPath;
+                console.log('[TidalSearch] Set path input to:', this.downloadPath);
+            } else {
+                const defaultPath = this.getDownloadPath() || '';
+                pathInput.value = defaultPath;
+                console.log('[TidalSearch] No download path set, using default:', defaultPath);
             }
             // Save path on blur/change
             pathInput.addEventListener('blur', (e) => this.handlePathChange(e.target.value));
@@ -818,13 +942,17 @@
         handlePathChange(path) {
             if (path !== this.downloadPath) {
                 this.downloadPath = path || null;
-                // Save to localStorage (audion_settings)
+                // Prefer using plugin API to update global app setting, fallback to localStorage
                 try {
-                    let settings = {};
-                    const stored = localStorage.getItem('audion_settings');
-                    if (stored) settings = JSON.parse(stored);
-                    settings.downloadLocation = path || '';
-                    localStorage.setItem('audion_settings', JSON.stringify(settings));
+                    if (this.api && this.api.settings && typeof this.api.settings.setDownloadLocation === 'function') {
+                        this.api.settings.setDownloadLocation(path || null);
+                    } else {
+                        let settings = {};
+                        const stored = localStorage.getItem('audion_settings');
+                        if (stored) settings = JSON.parse(stored);
+                        settings.downloadLocation = path || null;
+                        localStorage.setItem('audion_settings', JSON.stringify(settings));
+                    }
                 } catch (err) {
                     console.warn('[TidalSearch] Could not save download path:', err);
                 }
@@ -844,7 +972,49 @@
 
         async browseForFolder() {
             // Since Tauri's dialog plugin requires ES module import which isn't available in plugins,
-            // show a prompt for the user to enter the path manually
+            // Prefer native directory picker when available (must be triggered by user click).
+            try {
+                if (typeof window.showDirectoryPicker === 'function') {
+                    // This call is a direct user gesture (browse button click) so should be allowed.
+                    const dirHandle = await window.showDirectoryPicker();
+                    this.directoryHandle = dirHandle;
+                    // Persist handle so it can be reused across restarts
+                    try {
+                        await this.persistDirectoryHandle(dirHandle);
+                    } catch (err) {
+                        console.warn('[TidalSearch] Could not persist directory handle:', err);
+                    }
+
+                    // Try to derive a display path from the handle name for UI only
+                    const displayPath = dirHandle.name || '';
+                    this.downloadPath = displayPath || this.downloadPath;
+
+                    const pathInput = document.getElementById('tidal-download-path');
+                    if (pathInput) pathInput.value = this.downloadPath || '';
+
+                    // Persist selection via plugin API where possible (store the path string)
+                    try {
+                        if (this.api && this.api.settings && typeof this.api.settings.setDownloadLocation === 'function') {
+                            this.api.settings.setDownloadLocation(this.downloadPath || null);
+                        } else {
+                            let settings = {};
+                            const stored = localStorage.getItem('audion_settings');
+                            if (stored) settings = JSON.parse(stored);
+                            settings.downloadLocation = this.downloadPath || null;
+                            localStorage.setItem('audion_settings', JSON.stringify(settings));
+                        }
+                    } catch (err) {
+                        console.warn('[TidalSearch] Could not save download path:', err);
+                    }
+
+                    this.showToast(`✓ Download folder selected`);
+                    return;
+                }
+            } catch (err) {
+                console.warn('[TidalSearch] Directory picker failed:', err);
+            }
+
+            // Fallback to text prompt when directory picker is unavailable
             const currentPath = this.downloadPath || '';
             const newPath = prompt(
                 'Enter download folder path:\n\nExample:\nC:\\Users\\YourName\\Music\\Tidal\n/home/user/Music/Tidal',
@@ -857,7 +1027,20 @@
                 if (pathInput) {
                     pathInput.value = newPath;
                 }
-                this.saveSettings();
+                // Persist via plugin API where possible
+                try {
+                    if (this.api && this.api.settings && typeof this.api.settings.setDownloadLocation === 'function') {
+                        this.api.settings.setDownloadLocation(newPath || null);
+                    } else {
+                        let settings = {};
+                        const stored = localStorage.getItem('audion_settings');
+                        if (stored) settings = JSON.parse(stored);
+                        settings.downloadLocation = newPath || null;
+                        localStorage.setItem('audion_settings', JSON.stringify(settings));
+                    }
+                } catch (err) {
+                    console.warn('[TidalSearch] Could not save download path:', err);
+                }
                 if (newPath) {
                     this.showToast(`✓ Download path set:\n${newPath}`);
                 } else {
@@ -1295,6 +1478,8 @@
             return await response.json();
         },
 
+        // Complete saveTrack method - replace in your TidalSearch plugin
+
         async saveTrack(track, button) {
             console.log('[TidalSearch] Saving track:', track.title);
 
@@ -1345,76 +1530,217 @@
 
                 let savedPath = '';
 
-                // Always write standard metadata if API is available
-                if (this.api.library && this.api.library.downloadTrack) {
+                // PRE-DOWNLOAD: ensure we have permission to write to the selected folder
+                // and avoid attempting to write into a Downloads-like folder without explicit consent.
+                let forceBrowserDownload = false;
+                if (!this.api?.library?.downloadTrack) {
+                    // Only consider FS checks for browser fallback
+                    if (this.directoryHandle) {
+                        try {
+                            if (typeof this.directoryHandle.queryPermission === 'function') {
+                                let perm = await this.directoryHandle.queryPermission({ mode: 'readwrite' });
+                                if (perm === 'prompt') {
+                                    try {
+                                        // This save action is a user gesture; request permission now
+                                        perm = await this.directoryHandle.requestPermission({ mode: 'readwrite' });
+                                        console.log('[TidalSearch] requestPermission result during save:', perm);
+                                    } catch (reqErr) {
+                                        console.warn('[TidalSearch] requestPermission failed during save:', reqErr);
+                                    }
+                                }
+
+                                if (perm !== 'granted') {
+                                    const pick = confirm('No write permission for the selected folder. Click OK to choose a different folder now, or Cancel to use browser downloads.');
+                                    if (pick) {
+                                        await this.browseForFolder();
+                                        if (!this.directoryHandle) {
+                                            forceBrowserDownload = true;
+                                        } else {
+                                            const newPerm = typeof this.directoryHandle.queryPermission === 'function'
+                                                ? await this.directoryHandle.queryPermission({ mode: 'readwrite' })
+                                                : 'granted';
+                                            if (newPerm !== 'granted') {
+                                                this.showToast('Folder selected but write permission not granted. Using browser downloads.');
+                                                forceBrowserDownload = true;
+                                            }
+                                        }
+                                    } else {
+                                        forceBrowserDownload = true;
+                                    }
+                                }
+                            }
+                        } catch (err) {
+                            console.warn('[TidalSearch] Pre-check of directory handle failed:', err);
+                        }
+
+                        // If still using handle, check for 'Downloads' name and confirm with user
+                        if (!forceBrowserDownload && this.directoryHandle && (this.directoryHandle.name || '').toLowerCase().includes('download')) {
+                            const ok = confirm('The selected folder appears to be your Downloads folder. Save directly to Downloads? Click Cancel to pick another folder.');
+                            if (!ok) {
+                                await this.browseForFolder();
+                                if (!this.directoryHandle) forceBrowserDownload = true;
+                            }
+                        }
+                    } else {
+                        // No directory handle: ask user to pick or fallback to browser download
+                        const pick = confirm('No save folder selected. Click OK to pick a folder for direct saving, or Cancel to use browser downloads.');
+                        if (pick) {
+                            await this.browseForFolder();
+                            if (!this.directoryHandle) forceBrowserDownload = true;
+                        } else {
+                            forceBrowserDownload = true;
+                        }
+                    }
+                }
+
+                // Check if API is available
+                if (this.api?.library?.downloadTrack) {
                     if (progressText) progressText.textContent = `Saving: ${title}`;
+                    
                     // Get cover URL
                     const coverUrl = track.album?.cover
                         ? `https://resources.tidal.com/images/${track.album.cover.replace(/-/g, '/')}/640x640.jpg`
                         : null;
-                    // Write standard metadata fields
-                    const safeMetadata = {
+                    
+                    // Prepare metadata
+                    const metadata = {
                         title: title,
                         artist: artistName,
                         album: track.album?.title || null,
                         trackNumber: track.trackNumber || null,
-                        albumArt: coverUrl
+                        coverUrl: coverUrl  // Changed from albumArt to coverUrl to match backend
                     };
-                    savedPath = await this.api.library.downloadTrack({
+
+                    // CRITICAL FIX: Use path as directory only, not full path
+                    // The backend constructs fullPath = `${path}/${filename}`
+                    const downloadOptions = {
                         url: streamUrl,
                         filename: filename,
-                        metadata: safeMetadata
+                        metadata: metadata
+                    };
+
+                    // Add DIRECTORY PATH only (not including filename)
+                    if (this.downloadPath) {
+                        // Remove trailing slashes to be safe
+                        const cleanPath = this.downloadPath.replace(/[\/\\]+$/, '');
+                        downloadOptions.path = cleanPath;  // Use 'path' not 'downloadPath'
+                        console.log('[TidalSearch] Using custom download directory:', cleanPath);
+                        console.log('[TidalSearch] Full filename will be:', filename);
+                    } else {
+                        console.log('[TidalSearch] Using default download location');
+                    }
+
+                    console.log('[TidalSearch] Calling api.library.downloadTrack with:', {
+                        url: streamUrl.substring(0, 50) + '...',
+                        path: downloadOptions.path || '(default)',
+                        filename: filename
                     });
+
+                    savedPath = await this.api.library.downloadTrack(downloadOptions);
+                    console.log('[TidalSearch] API returned saved path:', savedPath);
+                    
                     if (progressText) progressText.textContent = `Saved: ${savedPath}`;
-                    console.log('[TidalSearch] File saved via API:', savedPath);
+                    
                 } else {
+                    // Fallback: Browser download with File System Access API if available
+                    console.log('[TidalSearch] API not available, using browser download');
+                    
                     if (progressText) progressText.textContent = `Downloading: ${title}`;
                     const audioResponse = await fetch(streamUrl);
                     if (!audioResponse.ok) {
                         throw new Error('Failed to download audio');
                     }
-                    // Show progress for browser download
+                    
+                    // Show progress
                     const reader = audioResponse.body.getReader();
                     const contentLength = +audioResponse.headers.get('Content-Length') || 0;
                     let receivedLength = 0;
                     let chunks = [];
+                    
                     while (true) {
                         const { done, value } = await reader.read();
                         if (done) break;
                         chunks.push(value);
                         receivedLength += value.length;
+                        
                         if (bar && contentLength) {
                             const percent = Math.round((receivedLength / contentLength) * 100);
                             const inner = bar.querySelector('.tidal-download-progress-bar-inner');
                             if (inner) inner.style.width = percent + '%';
                         }
-                        if (progressText) progressText.textContent = `Downloading: ${title} (${Math.round(receivedLength / 1024)} KB)`;
+                        
+                        if (progressText) {
+                            progressText.textContent = `Downloading: ${title} (${Math.round(receivedLength / 1024)} KB)`;
+                        }
                     }
+                    
                     const blob = new Blob(chunks);
-                    this.downloadViaBrowser(blob, filename);
-                    savedPath = `Downloads/${filename}`;
-                    if (progressText) progressText.textContent = `Saved: ${savedPath}`;
+
+                    // Try to use directory handle if we have one and permission checks passed
+                    let fsSaved = false;
+                    if (this.directoryHandle && !forceBrowserDownload) {
+                        try {
+                            // Check permission. If permission is 'prompt' we MAY request it here
+                            // because this code runs from a user click (save button), which
+                            // satisfies the user activation requirement in supporting browsers.
+                            if (typeof this.directoryHandle.queryPermission === 'function') {
+                                let perm = await this.directoryHandle.queryPermission({ mode: 'readwrite' });
+                                if (perm === 'prompt') {
+                                    try {
+                                        perm = await this.directoryHandle.requestPermission({ mode: 'readwrite' });
+                                        console.log('[TidalSearch] Requested write permission result:', perm);
+                                    } catch (reqErr) {
+                                        console.warn('[TidalSearch] requestPermission failed:', reqErr);
+                                    }
+                                }
+
+                                if (perm !== 'granted') {
+                                    console.warn('[TidalSearch] Directory handle does not have write permission:', perm);
+                                    throw new Error('No write permission');
+                                }
+                            }
+
+                            const fileHandle = await this.directoryHandle.getFileHandle(filename, { create: true });
+                            const writable = await fileHandle.createWritable();
+                            await writable.write(blob);
+                            await writable.close();
+                            savedPath = `${this.directoryHandle.name}/${filename}`;
+                            fsSaved = true;
+                            if (progressText) progressText.textContent = `Saved: ${savedPath}`;
+                        } catch (fsErr) {
+                            console.warn('[TidalSearch] File System Access failed:', fsErr);
+                            this.showToast('Permission denied — reselect folder in Settings (Browse).');
+                            fsSaved = false;
+                        }
+                    }
+
+                    if (!fsSaved) {
+                        this.downloadViaBrowser(blob, filename);
+                        savedPath = `Downloads/${filename}`;
+                        if (progressText) progressText.textContent = `Saved: ${savedPath}`;
+                    }
                 }
 
-                // Hide progress bar after a short delay
+                // Hide progress bar after delay
                 setTimeout(() => {
                     if (progressBar) progressBar.classList.add('hidden');
                 }, 2500);
 
-                // Mark as saved and show file info
+                // Mark as saved
                 button.classList.remove('saving');
                 button.classList.add('saved');
-                console.log(`[TidalSearch] Saved: ${savedPath}`);
+                console.log(`[TidalSearch] Final saved path: ${savedPath}`);
 
             } catch (err) {
                 console.error('[TidalSearch] Save error:', err);
                 button.classList.remove('saving');
-                // Show error in progress bar
+                
+                // Show error
                 const progressBar = document.getElementById('tidal-download-progress');
                 const progressText = progressBar?.querySelector('.tidal-download-progress-text');
                 if (progressBar) {
                     progressBar.classList.remove('hidden');
-                    if (progressText) progressText.textContent = `Error saving: ${err.message}`;
+                    if (progressText) progressText.textContent = `Error: ${err.message}`;
                     setTimeout(() => {
                         progressBar.classList.add('hidden');
                     }, 3000);
