@@ -35,6 +35,53 @@
     // Create a map of album_id to album for quick lookup
     $: albumMap = new Map($albums.map((a) => [a.id, a]));
 
+    // Sorting state
+    type SortField = "title" | "album" | "duration" | null;
+    let sortField: SortField = null;
+    let sortDirection: "asc" | "desc" = "asc";
+
+    function toggleSort(field: SortField) {
+        if (sortField === field) {
+            if (sortDirection === "asc") {
+                sortDirection = "desc";
+            } else {
+                sortField = null;
+                sortDirection = "asc";
+            }
+        } else {
+            sortField = field;
+            sortDirection = "asc";
+        }
+    }
+
+    $: sortedTracks = (() => {
+        if (!sortField) return filteredTracks;
+
+        return [...filteredTracks].sort((a, b) => {
+            let valA: any = "";
+            let valB: any = "";
+
+            switch (sortField) {
+                case "title":
+                    valA = (a.title || "").toLowerCase();
+                    valB = (b.title || "").toLowerCase();
+                    break;
+                case "album":
+                    valA = (a.album || "").toLowerCase();
+                    valB = (b.album || "").toLowerCase();
+                    break;
+                case "duration":
+                    valA = a.duration || 0;
+                    valB = b.duration || 0;
+                    break;
+            }
+
+            if (valA < valB) return sortDirection === "asc" ? -1 : 1;
+            if (valA > valB) return sortDirection === "asc" ? 1 : -1;
+            return 0;
+        });
+    })();
+
     function getTrackAlbumArt(track: Track): string | null {
         // For external tracks (Tidal, etc.), use cover_url directly
         if (track.cover_url) {
@@ -46,12 +93,19 @@
         return album ? getAlbumArtSrc(album.art_data) : null;
     }
 
-    function handleTrackClick(index: number) {
-        playTracks(filteredTracks, index);
+    function handleTrackClick(index: number, track: Track) {
+        // Find the actual index in the filtered/sorted list
+        const trackIndex = sortedTracks.findIndex((t) => t.id === track.id);
+        if (trackIndex !== -1) {
+            playTracks(sortedTracks, trackIndex);
+        }
     }
 
-    function handleTrackDoubleClick(index: number) {
-        playTracks(filteredTracks, index);
+    function handleTrackDoubleClick(index: number, track: Track) {
+        const trackIndex = sortedTracks.findIndex((t) => t.id === track.id);
+        if (trackIndex !== -1) {
+            playTracks(sortedTracks, trackIndex);
+        }
     }
 
     async function handleContextMenu(e: MouseEvent, index: number) {
@@ -82,7 +136,13 @@
             items: [
                 {
                     label: "Play",
-                    action: () => playTracks(filteredTracks, index),
+                    action: () => {
+                        const trackIndex = sortedTracks.findIndex(
+                            (t) => t.id === track.id,
+                        );
+                        if (trackIndex !== -1)
+                            playTracks(sortedTracks, trackIndex);
+                    },
                 },
                 { type: "separator" },
                 {
@@ -122,30 +182,64 @@
 </script>
 
 <div class="track-list">
-    <header class="list-header">
-        <span class="col-num">#</span>
-        <span class="col-cover"></span>
-        <span class="col-title">Title</span>
+    <header class="list-header" class:no-album={!showAlbum}>
+        <button class="col-header col-num" on:click={() => toggleSort(null)}>
+            {#if sortField === null}
+                <span class="sort-icon">#</span>
+            {:else}
+                #
+            {/if}
+        </button>
+        <span class="col-header col-cover"></span>
+        <button
+            class="col-header col-title"
+            on:click={() => toggleSort("title")}
+        >
+            Title
+            {#if sortField === "title"}
+                <span class="sort-icon"
+                    >{sortDirection === "asc" ? "▲" : "▼"}</span
+                >
+            {/if}
+        </button>
         {#if showAlbum}
-            <span class="col-album">Album</span>
+            <button
+                class="col-header col-album"
+                on:click={() => toggleSort("album")}
+            >
+                Album
+                {#if sortField === "album"}
+                    <span class="sort-icon"
+                        >{sortDirection === "asc" ? "▲" : "▼"}</span
+                    >
+                {/if}
+            </button>
         {/if}
-        <span class="col-duration">
+        <button
+            class="col-header col-duration"
+            on:click={() => toggleSort("duration")}
+        >
             <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
                 <path
                     d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"
                 />
             </svg>
-        </span>
+            {#if sortField === "duration"}
+                <span class="sort-icon"
+                    >{sortDirection === "asc" ? "▲" : "▼"}</span
+                >
+            {/if}
+        </button>
     </header>
 
     <div class="list-body">
-        {#each filteredTracks as track, index}
+        {#each sortedTracks as track, index}
             {@const albumArt = getTrackAlbumArt(track)}
             <button
                 class="track-row"
                 class:playing={$currentTrack?.id === track.id}
-                on:click={() => handleTrackClick(index)}
-                on:dblclick={() => handleTrackDoubleClick(index)}
+                on:click={() => handleTrackClick(index, track)}
+                on:dblclick={() => handleTrackDoubleClick(index, track)}
                 on:contextmenu={(e) => handleContextMenu(e, index)}
             >
                 <span class="col-num">
@@ -284,7 +378,49 @@
         position: sticky;
         top: 0;
         background-color: var(--bg-base);
+        background-color: var(--bg-base);
         z-index: 1;
+    }
+
+    .col-header {
+        background: none;
+        border: none;
+        padding: 0;
+        font: inherit;
+        color: inherit;
+        text-transform: inherit;
+        letter-spacing: inherit;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        transition: color var(--transition-fast);
+        user-select: none;
+    }
+
+    .col-header:hover {
+        color: var(--text-primary);
+    }
+
+    .col-header.col-num {
+        justify-content: center;
+    }
+
+    .col-header.col-title {
+        justify-content: flex-start;
+    }
+
+    .col-header.col-album {
+        justify-content: flex-start;
+    }
+
+    .col-header.col-duration {
+        justify-content: flex-end;
+    }
+
+    .sort-icon {
+        color: var(--accent-primary);
+        font-size: 0.75rem;
     }
 
     .list-header.no-album {
