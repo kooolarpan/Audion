@@ -743,22 +743,24 @@
         createPlayerBarButton() {
             if (document.getElementById('tidal-search-playerbar-btn')) return;
 
-            const volumeControls = document.querySelector('.volume-controls');
-            if (!volumeControls) return;
-
             const btn = document.createElement('button');
             btn.id = 'tidal-search-playerbar-btn';
-            btn.className = 'tidal-search-btn icon-btn';
+            // Removed 'tidal-search-btn icon-btn' classes to fit in menu
             btn.title = 'Tidal Search';
             btn.innerHTML = `
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <circle cx="11" cy="11" r="8"/>
                     <path d="M21 21l-4.35-4.35"/>
                 </svg>
+                <span>Tidal Search</span>
             `;
             btn.onclick = () => this.toggle();
 
-            volumeControls.insertBefore(btn, volumeControls.firstChild);
+            if (this.api && this.api.ui) {
+                this.api.ui.registerSlot('playerbar:menu', btn);
+            } else {
+                console.error('[TidalSearch] UI API not available');
+            }
         },
 
         // ═══════════════════════════════════════════════════════════════════════

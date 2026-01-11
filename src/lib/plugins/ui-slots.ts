@@ -1,7 +1,7 @@
 // UI Slot system for plugins
 // Provides formal extension points in the UI
 
-export type UISlotName = 'playerbar:left' | 'playerbar:right' | 'sidebar:top' | 'sidebar:bottom';
+export type UISlotName = 'playerbar:left' | 'playerbar:right' | 'sidebar:top' | 'sidebar:bottom' | 'playerbar:menu';
 
 export interface UISlotContent {
     pluginName: string;

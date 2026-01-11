@@ -9,7 +9,9 @@ export type ViewType =
     | 'artist-detail'
     | 'playlists'
     | 'playlist-detail'
-    | 'plugins';
+    | 'playlist-detail'
+    | 'plugins'
+    | 'settings';
 
 export interface ViewState {
     type: ViewType;
@@ -54,4 +56,8 @@ export function goToPlaylistDetail(playlistId: number): void {
 
 export function goToPlugins(): void {
     currentView.set({ type: 'plugins' });
+}
+
+export function goToSettings(): void {
+    currentView.set({ type: 'settings' });
 }

@@ -1,6 +1,4 @@
 <script lang="ts">
-    import { fade, fly } from "svelte/transition";
-    import { isSettingsOpen, toggleSettings } from "$lib/stores/ui";
     import { theme, presetAccents, type ThemeMode } from "$lib/stores/theme";
     import { appSettings } from "$lib/stores/settings";
     import { open } from "@tauri-apps/plugin-dialog";
@@ -23,16 +21,6 @@
         if (customColorInput && /^#[0-9A-Fa-f]{6}$/.test(customColorInput)) {
             theme.addCustomColor(customColorInput);
             theme.setAccentColor(customColorInput);
-        }
-    }
-
-    function handleClickOutside(e: MouseEvent) {
-        const target = e.target as HTMLElement;
-        if (
-            !target.closest(".settings-panel") &&
-            !target.closest(".settings-trigger")
-        ) {
-            toggleSettings();
         }
     }
 
@@ -62,375 +50,300 @@
     }
 </script>
 
-{#if $isSettingsOpen}
-    <!-- svelte-ignore a11y_click_events_have_key_events -->
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div
-        class="settings-overlay"
-        on:click={handleClickOutside}
-        transition:fade={{ duration: 150 }}
-    >
-        <!-- svelte-ignore a11y_click_events_have_key_events -->
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <div
-            class="settings-panel"
-            transition:fly={{ x: 300, duration: 300 }}
-            on:click|stopPropagation
-        >
-            <header class="settings-header">
-                <h2>Settings</h2>
-                <button
-                    class="close-btn"
-                    on:click={toggleSettings}
-                    title="Close settings"
-                    aria-label="Close settings"
-                >
-                    <svg
-                        viewBox="0 0 24 24"
-                        width="20"
-                        height="20"
-                        fill="currentColor"
+<div class="settings-view">
+    <header class="view-header">
+        <h1>Settings</h1>
+    </header>
+
+    <div class="settings-content">
+        <!-- Theme Mode -->
+        <section class="settings-section">
+            <h3 class="section-title">Appearance</h3>
+
+            <div class="setting-item">
+                <span class="setting-label">Theme Mode</span>
+                <div class="theme-modes">
+                    <button
+                        class="mode-btn"
+                        class:active={$theme.mode === "dark"}
+                        on:click={() => handleModeChange("dark")}
                     >
-                        <path
-                            d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
-                        />
-                    </svg>
-                </button>
-            </header>
-
-            <div class="settings-content">
-                <!-- Theme Mode -->
-                <section class="settings-section">
-                    <h3 class="section-title">Appearance</h3>
-
-                    <div class="setting-item">
-                        <span class="setting-label">Theme Mode</span>
-                        <div class="theme-modes">
-                            <button
-                                class="mode-btn"
-                                class:active={$theme.mode === "dark"}
-                                on:click={() => handleModeChange("dark")}
-                            >
-                                <svg
-                                    viewBox="0 0 24 24"
-                                    width="20"
-                                    height="20"
-                                    fill="currentColor"
-                                >
-                                    <path
-                                        d="M9.37 5.51c-.18.64-.27 1.31-.27 1.99 0 4.08 3.32 7.4 7.4 7.4.68 0 1.35-.09 1.99-.27C17.45 17.19 14.93 19 12 19c-3.86 0-7-3.14-7-7 0-2.93 1.81-5.45 4.37-6.49zM12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"
-                                    />
-                                </svg>
-                                <span>Dark</span>
-                            </button>
-                            <button
-                                class="mode-btn"
-                                class:active={$theme.mode === "light"}
-                                on:click={() => handleModeChange("light")}
-                            >
-                                <svg
-                                    viewBox="0 0 24 24"
-                                    width="20"
-                                    height="20"
-                                    fill="currentColor"
-                                >
-                                    <path
-                                        d="M6.76 4.84l-1.8-1.79-1.41 1.41 1.79 1.79 1.42-1.41zM4 10.5H1v2h3v-2zm9-9.95h-2V3.5h2V.55zm7.45 3.91l-1.41-1.41-1.79 1.79 1.41 1.41 1.79-1.79zm-3.21 13.7l1.79 1.8 1.41-1.41-1.8-1.79-1.4 1.4zM20 10.5v2h3v-2h-3zm-8-5c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm-1 16.95h2V19.5h-2v2.95zm-7.45-3.91l1.41 1.41 1.79-1.8-1.41-1.41-1.79 1.8z"
-                                    />
-                                </svg>
-                                <span>Light</span>
-                            </button>
-                            <button
-                                class="mode-btn"
-                                class:active={$theme.mode === "system"}
-                                on:click={() => handleModeChange("system")}
-                            >
-                                <svg
-                                    viewBox="0 0 24 24"
-                                    width="20"
-                                    height="20"
-                                    fill="currentColor"
-                                >
-                                    <path
-                                        d="M20 18c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z"
-                                    />
-                                </svg>
-                                <span>System</span>
-                            </button>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Accent Color -->
-                <section class="settings-section">
-                    <h3 class="section-title">Accent Color</h3>
-
-                    <div class="setting-item">
-                        <div class="color-grid">
-                            {#each presetAccents as preset}
-                                <button
-                                    class="color-swatch"
-                                    class:active={$theme.accentColor ===
-                                        preset.color}
-                                    style="--swatch-color: {preset.color}"
-                                    on:click={() =>
-                                        handleAccentChange(preset.color)}
-                                    title={preset.name}
-                                >
-                                    {#if $theme.accentColor === preset.color}
-                                        <svg
-                                            viewBox="0 0 24 24"
-                                            width="16"
-                                            height="16"
-                                            fill="currentColor"
-                                        >
-                                            <path
-                                                d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"
-                                            />
-                                        </svg>
-                                    {/if}
-                                </button>
-                            {/each}
-                        </div>
-                    </div>
-
-                    <!-- Custom Colors -->
-                    {#if $theme.customAccentColors.length > 0}
-                        <div class="setting-item">
-                            <span class="setting-label">Custom Colors</span>
-                            <div class="color-grid small">
-                                {#each $theme.customAccentColors as color}
-                                    <button
-                                        class="color-swatch small"
-                                        class:active={$theme.accentColor ===
-                                            color}
-                                        style="--swatch-color: {color}"
-                                        on:click={() =>
-                                            handleAccentChange(color)}
-                                    >
-                                        {#if $theme.accentColor === color}
-                                            <svg
-                                                viewBox="0 0 24 24"
-                                                width="12"
-                                                height="12"
-                                                fill="currentColor"
-                                            >
-                                                <path
-                                                    d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"
-                                                />
-                                            </svg>
-                                        {/if}
-                                    </button>
-                                {/each}
-                            </div>
-                        </div>
-                    {/if}
-
-                    <!-- Add Custom Color -->
-                    <div class="setting-item">
-                        <span class="setting-label">Add Custom Color</span>
-                        <div class="custom-color-input">
-                            <input
-                                type="color"
-                                bind:value={customColorInput}
-                                class="color-picker"
+                        <svg
+                            viewBox="0 0 24 24"
+                            width="20"
+                            height="20"
+                            fill="currentColor"
+                        >
+                            <path
+                                d="M9.37 5.51c-.18.64-.27 1.31-.27 1.99 0 4.08 3.32 7.4 7.4 7.4.68 0 1.35-.09 1.99-.27C17.45 17.19 14.93 19 12 19c-3.86 0-7-3.14-7-7 0-2.93 1.81-5.45 4.37-6.49zM12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"
                             />
-                            <input
-                                type="text"
-                                bind:value={customColorInput}
-                                placeholder="#1DB954"
-                                class="color-text"
-                                maxlength="7"
+                        </svg>
+                        <span>Dark</span>
+                    </button>
+                    <button
+                        class="mode-btn"
+                        class:active={$theme.mode === "light"}
+                        on:click={() => handleModeChange("light")}
+                    >
+                        <svg
+                            viewBox="0 0 24 24"
+                            width="20"
+                            height="20"
+                            fill="currentColor"
+                        >
+                            <path
+                                d="M6.76 4.84l-1.8-1.79-1.41 1.41 1.79 1.79 1.42-1.41zM4 10.5H1v2h3v-2zm9-9.95h-2V3.5h2V.55zm7.45 3.91l-1.41-1.41-1.79 1.79 1.41 1.41 1.79-1.79zm-3.21 13.7l1.79 1.8 1.41-1.41-1.8-1.79-1.4 1.4zM20 10.5v2h3v-2h-3zm-8-5c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm-1 16.95h2V19.5h-2v2.95zm-7.45-3.91l1.41 1.41 1.79-1.8-1.41-1.41-1.79 1.8z"
                             />
-                            <button
-                                class="add-btn"
-                                on:click={handleCustomColorAdd}
-                            >
-                                Add
-                            </button>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Downloads -->
-                <section class="settings-section">
-                    <h3 class="section-title">Downloads</h3>
-
-                    <div class="setting-item">
-                        <span class="setting-label">Save Location</span>
-                        <div class="path-input-container">
-                            <input
-                                type="text"
-                                class="path-input"
-                                placeholder="Default: Browser Downloads"
-                                bind:value={downloadPath}
-                                on:blur={handleDownloadPathChange}
+                        </svg>
+                        <span>Light</span>
+                    </button>
+                    <button
+                        class="mode-btn"
+                        class:active={$theme.mode === "system"}
+                        on:click={() => handleModeChange("system")}
+                    >
+                        <svg
+                            viewBox="0 0 24 24"
+                            width="20"
+                            height="20"
+                            fill="currentColor"
+                        >
+                            <path
+                                d="M20 18c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z"
                             />
-                            <button
-                                class="browse-btn"
-                                on:click={browseDownloadLocation}
-                            >
-                                Browse
-                            </button>
-                            {#if downloadPath}
-                                <button
-                                    class="clear-btn"
-                                    on:click={clearDownloadPath}
-                                    title="Clear"
-                                >
-                                    ✕
-                                </button>
-                            {/if}
-                        </div>
-                        <p class="setting-hint">
-                            Set a folder for Tidal downloads. Leave empty for
-                            browser downloads.
-                        </p>
-                    </div>
-                </section>
-
-                <!-- Developer -->
-                <section class="settings-section">
-                    <h3 class="section-title">Developer</h3>
-
-                    <div class="setting-item">
-                        <div class="toggle-container">
-                            <div class="toggle-info">
-                                <span class="setting-label">Developer Mode</span
-                                >
-                                <p class="setting-hint">
-                                    Enable browser right-click menu and
-                                    inspection tools
-                                </p>
-                            </div>
-                            <button
-                                class="toggle-btn"
-                                class:active={$appSettings.developerMode}
-                                on:click={() =>
-                                    appSettings.setDeveloperMode(
-                                        !$appSettings.developerMode,
-                                    )}
-                                aria-label="Toggle Developer Mode"
-                            >
-                                <div class="toggle-handle"></div>
-                            </button>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- About -->
-                <section class="settings-section">
-                    <h3 class="section-title">About</h3>
-                    <div class="about-info">
-                        <div class="app-logo">
-                            <svg
-                                viewBox="0 0 48 48"
-                                fill="none"
-                                stroke="currentColor"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="4"
-                                width="32"
-                                height="32"
-                            >
-                                <path d="M5 42H10"></path><path d="M5 36H10"
-                                ></path><path d="M5 30H10"></path><path
-                                    d="M5 24H10"
-                                ></path><path d="M16 42H21"></path><path
-                                    d="M16 36H21"
-                                ></path><path d="M16 30H21"></path><path
-                                    d="M16 24H21"
-                                ></path><path d="M16 18H21"></path><path
-                                    d="M16 12H21"
-                                ></path><path d="M16 6H21"></path><path
-                                    d="M27 42H32"
-                                ></path><path d="M38 42H43"></path><path
-                                    d="M27 36H32"
-                                ></path><path d="M38 36H43"></path><path
-                                    d="M27 30H32"
-                                ></path><path d="M38 30H43"></path><path
-                                    d="M38 24H43"
-                                ></path><path d="M38 18H43"></path>
-                            </svg>
-                            <span>Audion</span>
-                        </div>
-                        <p class="version">Version 1.0.0</p>
-                        <p class="copyright">
-                            A modern music player built with Tauri & Svelte
-                        </p>
-                    </div>
-                </section>
+                        </svg>
+                        <span>System</span>
+                    </button>
+                </div>
             </div>
-        </div>
+        </section>
+
+        <!-- Accent Color -->
+        <section class="settings-section">
+            <h3 class="section-title">Accent Color</h3>
+
+            <div class="setting-item">
+                <div class="color-grid">
+                    {#each presetAccents as preset}
+                        <button
+                            class="color-swatch"
+                            class:active={$theme.accentColor === preset.color}
+                            style="--swatch-color: {preset.color}"
+                            on:click={() => handleAccentChange(preset.color)}
+                            title={preset.name}
+                        >
+                            {#if $theme.accentColor === preset.color}
+                                <svg
+                                    viewBox="0 0 24 24"
+                                    width="16"
+                                    height="16"
+                                    fill="currentColor"
+                                >
+                                    <path
+                                        d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"
+                                    />
+                                </svg>
+                            {/if}
+                        </button>
+                    {/each}
+                </div>
+            </div>
+
+            <!-- Custom Colors -->
+            {#if $theme.customAccentColors.length > 0}
+                <div class="setting-item">
+                    <span class="setting-label">Custom Colors</span>
+                    <div class="color-grid small">
+                        {#each $theme.customAccentColors as color}
+                            <button
+                                class="color-swatch small"
+                                class:active={$theme.accentColor === color}
+                                style="--swatch-color: {color}"
+                                on:click={() => handleAccentChange(color)}
+                            >
+                                {#if $theme.accentColor === color}
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        width="12"
+                                        height="12"
+                                        fill="currentColor"
+                                    >
+                                        <path
+                                            d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"
+                                        />
+                                    </svg>
+                                {/if}
+                            </button>
+                        {/each}
+                    </div>
+                </div>
+            {/if}
+
+            <!-- Add Custom Color -->
+            <div class="setting-item">
+                <span class="setting-label">Add Custom Color</span>
+                <div class="custom-color-input">
+                    <input
+                        type="color"
+                        bind:value={customColorInput}
+                        class="color-picker"
+                    />
+                    <input
+                        type="text"
+                        bind:value={customColorInput}
+                        placeholder="#1DB954"
+                        class="color-text"
+                        maxlength="7"
+                    />
+                    <button class="add-btn" on:click={handleCustomColorAdd}>
+                        Add
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Downloads -->
+        <section class="settings-section">
+            <h3 class="section-title">Downloads</h3>
+
+            <div class="setting-item">
+                <span class="setting-label">Save Location</span>
+                <div class="path-input-container">
+                    <input
+                        type="text"
+                        class="path-input"
+                        placeholder="Default: Browser Downloads"
+                        bind:value={downloadPath}
+                        on:blur={handleDownloadPathChange}
+                    />
+                    <button
+                        class="browse-btn"
+                        on:click={browseDownloadLocation}
+                    >
+                        Browse
+                    </button>
+                    {#if downloadPath}
+                        <button
+                            class="clear-btn"
+                            on:click={clearDownloadPath}
+                            title="Clear"
+                        >
+                            ✕
+                        </button>
+                    {/if}
+                </div>
+                <p class="setting-hint">
+                    Set a folder for Tidal downloads. Leave empty for browser
+                    downloads.
+                </p>
+            </div>
+        </section>
+
+        <!-- Developer -->
+        <section class="settings-section">
+            <h3 class="section-title">Developer</h3>
+
+            <div class="setting-item">
+                <div class="toggle-container">
+                    <div class="toggle-info">
+                        <span class="setting-label">Developer Mode</span>
+                        <p class="setting-hint">
+                            Enable browser right-click menu and inspection tools
+                        </p>
+                    </div>
+                    <button
+                        class="toggle-btn"
+                        class:active={$appSettings.developerMode}
+                        on:click={() =>
+                            appSettings.setDeveloperMode(
+                                !$appSettings.developerMode,
+                            )}
+                        aria-label="Toggle Developer Mode"
+                    >
+                        <div class="toggle-handle"></div>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- About -->
+        <section class="settings-section">
+            <h3 class="section-title">About</h3>
+            <div class="about-info">
+                <div class="app-logo">
+                    <svg
+                        viewBox="0 0 48 48"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="4"
+                        width="32"
+                        height="32"
+                    >
+                        <path d="M5 42H10"></path><path d="M5 36H10"
+                        ></path><path d="M5 30H10"></path><path d="M5 24H10"
+                        ></path><path d="M16 42H21"></path><path d="M16 36H21"
+                        ></path><path d="M16 30H21"></path><path d="M16 24H21"
+                        ></path><path d="M16 18H21"></path><path d="M16 12H21"
+                        ></path><path d="M16 6H21"></path><path d="M27 42H32"
+                        ></path><path d="M38 42H43"></path><path d="M27 36H32"
+                        ></path><path d="M38 36H43"></path><path d="M27 30H32"
+                        ></path><path d="M38 30H43"></path><path d="M38 24H43"
+                        ></path><path d="M38 18H43"></path>
+                    </svg>
+                    <span>Audion</span>
+                </div>
+                <p class="version">Version 1.0.0</p>
+                <p class="copyright">
+                    A modern music player built with Tauri & Svelte
+                </p>
+            </div>
+        </section>
     </div>
-{/if}
+</div>
 
 <style>
-    .settings-overlay {
-        position: fixed;
-        inset: 0;
-        background-color: rgba(0, 0, 0, 0.5);
-        z-index: 2000;
-        display: flex;
-        justify-content: flex-end;
-    }
-
-    .settings-panel {
-        width: 400px;
-        max-width: 100%;
+    .settings-view {
         height: 100%;
-        background-color: var(--bg-elevated);
         display: flex;
         flex-direction: column;
-        box-shadow: var(--shadow-lg);
+        overflow: hidden;
     }
 
-    .settings-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: var(--spacing-lg);
-        border-bottom: 1px solid var(--border-color);
+    .view-header {
+        padding: var(--spacing-lg) var(--spacing-md);
+        flex-shrink: 0;
     }
 
-    .settings-header h2 {
-        font-size: 1.25rem;
-        font-weight: 600;
-    }
-
-    .close-btn {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 36px;
-        height: 36px;
-        border-radius: var(--radius-full);
-        color: var(--text-secondary);
-        transition: all var(--transition-fast);
-    }
-
-    .close-btn:hover {
-        color: var(--text-primary);
-        background-color: rgba(255, 255, 255, 0.1);
+    .view-header h1 {
+        font-size: 2rem;
+        font-weight: 700;
     }
 
     .settings-content {
         flex: 1;
         overflow-y: auto;
-        padding: var(--spacing-lg);
+        padding: var(--spacing-md);
+        padding-bottom: calc(var(--player-height) + var(--spacing-lg));
     }
 
     .settings-section {
         margin-bottom: var(--spacing-xl);
+        background-color: var(--bg-elevated);
+        border-radius: var(--radius-md);
+        padding: var(--spacing-lg);
     }
 
     .section-title {
-        font-size: 0.6875rem;
+        font-size: 0.75rem;
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.1em;
         color: var(--text-subdued);
         margin-bottom: var(--spacing-md);
+        padding-bottom: var(--spacing-sm);
+        border-bottom: 1px solid var(--border-color);
     }
 
     .setting-item {
@@ -438,7 +351,7 @@
     }
 
     .setting-label {
-        font-size: 0.875rem;
+        font-size: 0.9375rem;
         font-weight: 500;
         color: var(--text-primary);
         margin-bottom: var(--spacing-xs);
@@ -448,7 +361,7 @@
     /* Theme Mode Buttons */
     .theme-modes {
         display: flex;
-        gap: var(--spacing-sm);
+        gap: var(--spacing-md);
     }
 
     .mode-btn {
@@ -456,8 +369,8 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: var(--spacing-xs);
-        padding: var(--spacing-md);
+        gap: var(--spacing-sm);
+        padding: var(--spacing-lg);
         background-color: var(--bg-surface);
         border-radius: var(--radius-md);
         color: var(--text-secondary);
@@ -473,22 +386,19 @@
     .mode-btn.active {
         border-color: var(--accent-primary);
         color: var(--accent-primary);
+        background-color: rgba(var(--accent-rgb), 0.1);
     }
 
     .mode-btn span {
-        font-size: 0.75rem;
+        font-size: 0.875rem;
         font-weight: 500;
     }
 
     /* Color Grid */
     .color-grid {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
         gap: var(--spacing-sm);
-    }
-
-    .color-grid.small {
-        grid-template-columns: repeat(5, 1fr);
     }
 
     .color-swatch {
@@ -501,6 +411,8 @@
         cursor: pointer;
         transition: all var(--transition-fast);
         border: 2px solid transparent;
+        width: 100%;
+        max-width: 48px;
     }
 
     .color-swatch:hover {
@@ -554,6 +466,7 @@
         border-radius: var(--radius-sm);
         color: var(--text-primary);
         font-family: monospace;
+        max-width: 120px;
     }
 
     .color-text:focus {
@@ -602,18 +515,19 @@
 
     .browse-btn {
         padding: var(--spacing-sm) var(--spacing-md);
-        background-color: var(--bg-highlight);
+        background-color: var(--bg-surface);
         color: var(--text-primary);
         font-weight: 500;
         font-size: 0.875rem;
         border-radius: var(--radius-sm);
         transition: all var(--transition-fast);
         white-space: nowrap;
+        border: 1px solid var(--border-color);
     }
 
     .browse-btn:hover {
-        background-color: var(--accent-primary);
-        color: var(--bg-base);
+        background-color: var(--bg-highlight);
+        border-color: var(--text-primary);
     }
 
     .clear-btn {
@@ -634,7 +548,7 @@
     }
 
     .setting-hint {
-        font-size: 0.75rem;
+        font-size: 0.8125rem;
         color: var(--text-subdued);
         margin-top: var(--spacing-xs);
     }
@@ -645,6 +559,7 @@
         padding: var(--spacing-lg);
         background-color: var(--bg-surface);
         border-radius: var(--radius-md);
+        margin-top: var(--spacing-sm);
     }
 
     .app-logo {
@@ -677,34 +592,38 @@
     }
 
     .toggle-btn {
-        width: 44px;
-        height: 24px;
-        background-color: var(--bg-highlight);
-        border-radius: 12px;
+        width: 48px;
+        height: 26px;
+        background-color: var(--bg-surface);
+        border: 1px solid var(--border-color);
+        border-radius: 13px;
         position: relative;
         cursor: pointer;
-        transition: background-color var(--transition-fast);
-        border: none;
+        transition: all var(--transition-fast);
         padding: 0;
     }
 
     .toggle-btn.active {
         background-color: var(--accent-primary);
+        border-color: var(--accent-primary);
     }
 
     .toggle-handle {
         width: 20px;
         height: 20px;
-        background-color: white;
+        background-color: var(--text-subdued);
         border-radius: 50%;
         position: absolute;
         top: 2px;
         left: 2px;
-        transition: transform var(--transition-fast);
+        transition:
+            transform var(--transition-fast),
+            background-color var(--transition-fast);
         box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
     }
 
     .toggle-btn.active .toggle-handle {
-        transform: translateX(20px);
+        transform: translateX(22px);
+        background-color: white;
     }
 </style>

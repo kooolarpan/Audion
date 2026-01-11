@@ -9,7 +9,7 @@
   import ContextMenu from "$lib/components/ContextMenu.svelte";
   import QueuePanel from "$lib/components/QueuePanel.svelte";
   import MiniPlayer from "$lib/components/MiniPlayer.svelte";
-  import ThemeSettings from "$lib/components/ThemeSettings.svelte";
+
   import { loadLibrary, loadPlaylists } from "$lib/stores/library";
   import ToastContainer from "$lib/components/ToastContainer.svelte";
   import { isTauri } from "$lib/api/tauri";
@@ -144,7 +144,6 @@
       <QueuePanel />
       <FullScreenPlayer />
       <ContextMenu />
-      <ThemeSettings />
     </div>
     <PlayerBar bind:audioElementRef={audioElement} hidden={$isMiniPlayer} />
     <MiniPlayer />

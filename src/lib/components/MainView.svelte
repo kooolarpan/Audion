@@ -15,7 +15,9 @@
     import PlaylistView from "./PlaylistView.svelte";
     import PlaylistDetail from "./PlaylistDetail.svelte";
     import SearchResults from "./SearchResults.svelte";
+
     import PluginManager from "./PluginManager.svelte";
+    import ThemeSettings from "./ThemeSettings.svelte";
 
     let searchInput = "";
     let searchDebounceTimer: ReturnType<typeof setTimeout>;
@@ -143,6 +145,10 @@
     {:else if $currentView.type === "plugins"}
         <div class="view-container no-padding">
             <PluginManager />
+        </div>
+    {:else if $currentView.type === "settings"}
+        <div class="view-container no-padding">
+            <ThemeSettings />
         </div>
     {:else}
         <div class="view-container">

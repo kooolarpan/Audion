@@ -293,33 +293,32 @@
 
         createPlayerBarButton() {
             // Check if button already exists
-            if (document.getElementById('pc-player-bar-btn')) {
+            if (this.playerBarButton) {
                 return;
             }
 
-            const volumeControls = document.querySelector('.volume-controls');
-            if (!volumeControls) {
-                return; // Will retry
-            }
-
+            // Create menu button
             const button = document.createElement('button');
             button.id = 'pc-player-bar-btn';
-            button.className = 'icon-btn active';
+            // No specific class needed, PluginMenu styles it
             button.title = 'Toggle Play Counter';
             button.innerHTML = `
                 <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
                     <path d="M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z"/>
                 </svg>
+                <span>Play Counter</span>
             `;
-            button.addEventListener('click', () => this.toggleVisibility());
+            button.addEventListener('click', () => {
+                this.toggleVisibility();
+                // Optional: close menu if we could access it, but we can't easily.
+            });
 
-            const separator = volumeControls.querySelector('.volume-separator');
-            if (separator) {
-                volumeControls.insertBefore(button, separator);
+            if (this.api && this.api.ui) {
+                this.api.ui.registerSlot('playerbar:menu', button);
+                this.playerBarButton = button;
             } else {
-                volumeControls.insertBefore(button, volumeControls.firstChild);
+                console.error('[PlayCounter] UI API not available for slot registration');
             }
-            this.playerBarButton = button;
         },
 
         toggleMinimize() {
