@@ -29,6 +29,7 @@
     import { formatDuration, getAlbumArtSrc, getAlbum } from "$lib/api/tauri";
     import { uiSlotManager } from "$lib/plugins/ui-slots";
     import PluginMenu from "$lib/components/PluginMenu.svelte";
+    import { goToArtistDetail } from "$lib/stores/view";
     import type { Album } from "$lib/api/tauri";
 
     export let audioElementRef: HTMLAudioElement | null = null;
@@ -175,8 +176,20 @@
                 <span class="track-title truncate"
                     >{$currentTrack.title || "Unknown Title"}</span
                 >
-                <span class="track-artist truncate"
-                    >{$currentTrack.artist || "Unknown Artist"}</span
+                <span
+                    class="track-artist truncate"
+                    role="button"
+                    tabindex="0"
+                    on:click|stopPropagation={() => {
+                        if ($currentTrack?.artist) {
+                            goToArtistDetail($currentTrack.artist);
+                        }
+                    }}
+                    on:keydown={(e) => {
+                        if (e.key === "Enter" && $currentTrack?.artist) {
+                            goToArtistDetail($currentTrack.artist);
+                        }
+                    }}>{$currentTrack.artist || "Unknown Artist"}</span
                 >
             </div>
         {:else}
@@ -504,6 +517,12 @@
     .track-title {
         font-size: 0.875rem;
         font-weight: 500;
+    }
+
+    .track-title:hover {
+        color: var(--text-primary);
+        text-decoration: underline;
+        cursor: pointer;
     }
 
     .track-artist {

@@ -462,6 +462,7 @@
 
     .track-row:hover {
         background-color: rgba(255, 255, 255, 0.1);
+        cursor: pointer;
     }
 
     .track-row.playing {
@@ -605,6 +606,12 @@
     .track-artist {
         font-size: 0.8125rem;
         color: var(--text-secondary);
+    }
+
+    .track-artist:hover {
+        color: var(--text-primary);
+        text-decoration: underline;
+        cursor: pointer;
     }
 
     .col-album {
