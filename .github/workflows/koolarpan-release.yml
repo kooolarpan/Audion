@@ -270,7 +270,7 @@ jobs:
           npm run tauri android init -- --config src-tauri/tauri.conf.koolarpan.json
       
       - name: Build Tauri app
-        run: npm run tauri android build -- --config src-tauri/tauri.conf.koolarpan.json --apk
+        run: npm run tauri android build -- --config src-tauri/tauri.conf.koolarpan.json --apk true
       
       - name: Find and rename APK
         run: |
