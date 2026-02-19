@@ -10,6 +10,10 @@
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "tauri": "tauri",
+    "tauri:dev": "tauri dev --config src-tauri/tauri.conf.dev.json",
+    "tauri:dev:koolarpan": "tauri dev --config src-tauri/tauri.conf.koolarpan.json",
+    "tauri:build": "tauri build",
+    "tauri:build:koolarpan": "tauri build --config src-tauri/tauri.conf.koolarpan.json",
     "sync-plugins": "node scripts/sync-plugins.js"
   },
   "license": "MIT",
