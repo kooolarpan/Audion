@@ -1,5 +1,8 @@
 name: Koolarpan Release
 on:
+  push:
+    branches:
+      - koolarpan
   workflow_dispatch:
     inputs:
       platform:
@@ -31,7 +34,7 @@ jobs:
   release-windows:
     needs: check-branch
     runs-on: windows-latest
-    if: ${{ github.event_name == 'workflow_dispatch' && (inputs.platform == 'windows' || inputs.platform == 'all') }}
+    if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && (inputs.platform == 'windows' || inputs.platform == 'all')) }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -90,7 +93,7 @@ jobs:
   release-linux:
     needs: check-branch
     runs-on: ubuntu-24.04
-    if: ${{ github.event_name == 'workflow_dispatch' && (inputs.platform == 'linux' || inputs.platform == 'all') }}
+    if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && (inputs.platform == 'linux' || inputs.platform == 'all')) }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -159,7 +162,7 @@ jobs:
   release-macos:
     needs: check-branch
     runs-on: macos-latest
-    if: ${{ github.event_name == 'workflow_dispatch' && (inputs.platform == 'macos' || inputs.platform == 'all') }}
+    if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && (inputs.platform == 'macos' || inputs.platform == 'all')) }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -216,7 +219,7 @@ jobs:
   release-android:
     needs: check-branch
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'workflow_dispatch' && (inputs.platform == 'android' || inputs.platform == 'all') }}
+    if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && (inputs.platform == 'android' || inputs.platform == 'all')) }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
