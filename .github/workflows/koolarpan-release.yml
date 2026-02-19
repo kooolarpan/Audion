@@ -1,4 +1,4 @@
-name: Koolarpan Release
+name: KoolArpan Release
 on:
   push:
     branches:
@@ -70,11 +70,11 @@ jobs:
         shell: pwsh
         run: |
           Get-ChildItem -Path "src-tauri/target/release/bundle/msi/*.msi" | ForEach-Object {
-            $newName = $_.BaseName + "-koolarpan" + $_.Extension
+            $newName = "Audio.KoolArpan-${{ steps.version.outputs.version }}_x64-setup.msi"
             Rename-Item -Path $_.FullName -NewName $newName
           }
           Get-ChildItem -Path "src-tauri/target/release/bundle/nsis/*.exe" | ForEach-Object {
-            $newName = $_.BaseName + "-koolarpan" + $_.Extension
+            $newName = "Audio.KoolArpan-${{ steps.version.outputs.version }}_x64-setup.exe"
             Rename-Item -Path $_.FullName -NewName $newName
           }
 
@@ -85,8 +85,8 @@ jobs:
           name: v${{ steps.version.outputs.version }} (Koolarpan)
           body: "Koolarpan build of Audion."
           files: |
-            src-tauri/target/release/bundle/msi/*-koolarpan.msi
-            src-tauri/target/release/bundle/nsis/*-koolarpan.exe
+            src-tauri/target/release/bundle/msi/*.msi
+            src-tauri/target/release/bundle/nsis/*.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -130,6 +130,7 @@ jobs:
             gir1.2-webkit2-4.1=2.44.0-2 \
             libappindicator3-dev \
             librsvg2-dev \
+            libasound2-dev \
             patchelf
       
       - name: Install dependencies
@@ -140,11 +141,12 @@ jobs:
       
       - name: Rename artifacts
         run: |
+          shopt -s nullglob
           for f in src-tauri/target/release/bundle/deb/*.deb; do
-            mv "$f" "${f%.deb}-koolarpan.deb"
+            mv "$f" "Audio.KoolArpan-${{ steps.version.outputs.version }}_amd64.deb"
           done
           for f in src-tauri/target/release/bundle/appimage/*.AppImage; do
-            mv "$f" "${f%.AppImage}-koolarpan.AppImage"
+            mv "$f" "Audio.KoolArpan-${{ steps.version.outputs.version }}_x86_64.AppImage"
           done
 
       - name: Create GitHub Release
@@ -154,8 +156,8 @@ jobs:
           name: v${{ steps.version.outputs.version }} (Koolarpan)
           body: "Koolarpan build of Audion."
           files: |
-            src-tauri/target/release/bundle/deb/*-koolarpan.deb
-            src-tauri/target/release/bundle/appimage/*-koolarpan.AppImage
+            Audio.KoolArpan-${{ steps.version.outputs.version }}_amd64.deb
+            Audio.KoolArpan-${{ steps.version.outputs.version }}_x86_64.AppImage
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -197,11 +199,12 @@ jobs:
       
       - name: Rename artifacts
         run: |
+          shopt -s nullglob
           for f in src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg; do
-            mv "$f" "${f%.dmg}-koolarpan.dmg"
+            mv "$f" "Audio.KoolArpan-${{ steps.version.outputs.version }}_universal.dmg"
           done
           for f in src-tauri/target/universal-apple-darwin/release/bundle/macos/*.app.tar.gz; do
-            mv "$f" "${f%.app.tar.gz}-koolarpan.app.tar.gz"
+            mv "$f" "Audio.KoolArpan-${{ steps.version.outputs.version }}_universal.app.tar.gz"
           done
 
       - name: Create GitHub Release
@@ -211,8 +214,8 @@ jobs:
           name: v${{ steps.version.outputs.version }} (Koolarpan)
           body: "Koolarpan build of Audion."
           files: |
-            src-tauri/target/universal-apple-darwin/release/bundle/dmg/*-koolarpan.dmg
-            src-tauri/target/universal-apple-darwin/release/bundle/macos/*-koolarpan.app.tar.gz
+            Audio.KoolArpan-${{ steps.version.outputs.version }}_universal.dmg
+            Audio.KoolArpan-${{ steps.version.outputs.version }}_universal.app.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -257,14 +260,20 @@ jobs:
       
       - name: Install dependencies
         run: npm install
+
+      - name: Initialize Android project
+        run: |
+          rm -rf src-tauri/gen/android
+          npm run tauri android init -- --config src-tauri/tauri.conf.koolarpan.json
       
       - name: Build Tauri app
         run: npm run tauri android build -- --config src-tauri/tauri.conf.koolarpan.json
       
       - name: Rename artifacts
         run: |
+          shopt -s nullglob
           for f in src-tauri/gen/android/app/build/outputs/apk/release/*.apk; do
-            mv "$f" "${f%.apk}-koolarpan.apk"
+            mv "$f" "Audio.KoolArpan-${{ steps.version.outputs.version }}.apk"
           done
 
       - name: Create GitHub Release
@@ -274,6 +283,6 @@ jobs:
           name: v${{ steps.version.outputs.version }} (Koolarpan)
           body: "Koolarpan build of Audion."
           files: |
-            src-tauri/gen/android/app/build/outputs/apk/release/*-koolarpan.apk
+            Audio.KoolArpan-${{ steps.version.outputs.version }}.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
