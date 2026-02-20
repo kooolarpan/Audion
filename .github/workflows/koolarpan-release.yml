@@ -155,6 +155,7 @@ jobs:
         run: xvfb-run npm run tauri:build:koolarpan
       
       - name: Rename artifacts
+        shell: bash
         run: |
           shopt -s nullglob
           for f in src-tauri/target/release/bundle/deb/*.deb; do
@@ -213,6 +214,7 @@ jobs:
         run: npm run tauri:build:koolarpan -- --target universal-apple-darwin
       
       - name: Rename artifacts
+        shell: bash
         run: |
           shopt -s nullglob
           for f in src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg; do
@@ -279,10 +281,16 @@ jobs:
           echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/27.0.11902837" >> $GITHUB_ENV
           echo "NDK_HOME=$ANDROID_SDK_ROOT/ndk/27.0.11902837" >> $GITHUB_ENV
 
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libssl-dev xdg-utils
+          
       - name: Install dependencies
         run: npm install
 
       - name: Initialize and build Android project
+        shell: bash
         run: |
           # 1. Create a signing key so the APK is valid for installation (fixes "invalid package")
           keytool -genkey -v -keystore release.keystore -alias audion -keyalg RSA -keysize 2048 -validity 10000 -storepass password -keypass password -dname "CN=Audion, OU=KoolArpan, O=KoolArpan, L=City, S=State, C=US"
@@ -292,7 +300,9 @@ jobs:
           npm run tauri android init -- --config src-tauri/tauri.conf.koolarpan.json
           
           # 3. Copy custom icons to the generated android project (fixes the icon issue)
-          cp -r src-tauri/icons/android/* src-tauri/gen/android/app/src/main/res/
+          if [ -d "src-tauri/icons/android" ]; then
+            cp -r src-tauri/icons/android/* src-tauri/gen/android/app/src/main/res/ || true
+          fi
           
           # 4. Build split APKs using the signing key
           export TAURI_ANDROID_KEYSTORE=$GITHUB_WORKSPACE/release.keystore
@@ -301,14 +311,21 @@ jobs:
           export TAURI_ANDROID_KEY_PASSWORD=password
           
           npm run tauri android build -- --config src-tauri/tauri.conf.koolarpan.json --apk true --split-per-abi
+          
+          # Debug: List all files in the output directory
+          echo "Listing generated APKs:"
+          ls -R src-tauri/gen/android/app/build/outputs/apk || echo "Output directory not found"
       
       - name: Find and rename APKs
+        shell: bash
         run: |
           # Find all architecture APKs and rename them to include architecture in name
-          find src-tauri/gen/android/app/build/outputs/apk -name '*.apk' | while read -r apk; do
+          # We look in the entire gen/android folder to be safe
+          find src-tauri/gen/android -name '*.apk' | while read -r apk; do
             filename=$(basename "$apk")
+            echo "Found APK: $filename at $apk"
             # Extract architecture (e.g., arm64-v8a)
-            arch=$(echo "$filename" | sed 's/app-//;s/-debug.apk//;s/-release-unsigned.apk//')
+            arch=$(echo "$filename" | sed 's/app-//;s/-debug.apk//;s/-release-unsigned.apk//;s/-release.apk//')
             new_name="Audio.KoolArpan-${{ steps.version.outputs.version }}-$arch.apk"
             echo "Preparing artifact: $new_name"
             cp "$apk" "$new_name"
