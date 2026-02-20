@@ -92,9 +92,17 @@ jobs:
 
   release-linux:
     needs: check-branch
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:20.04
+      options: --user root
     if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && (inputs.platform == 'linux' || inputs.platform == 'all')) }}
     steps:
+      - name: Install required tools
+        run: |
+          apt-get update
+          apt-get install -y sudo curl wget git build-essential
+
       - name: Checkout repository
         uses: actions/checkout@v4
       
