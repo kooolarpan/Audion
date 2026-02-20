@@ -100,6 +100,7 @@ jobs:
     steps:
       - name: Install required tools
         run: |
+          export DEBIAN_FRONTEND=noninteractive
           apt-get update
           apt-get install -y sudo curl wget git build-essential jq
 
@@ -128,6 +129,7 @@ jobs:
       
       - name: Install Linux dependencies
         run: |
+          export DEBIAN_FRONTEND=noninteractive
           sudo apt-get update
           sudo apt-get install -y \
             libwebkit2gtk-4.0-dev \
