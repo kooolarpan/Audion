@@ -101,7 +101,7 @@ jobs:
       - name: Install required tools
         run: |
           apt-get update
-          apt-get install -y sudo curl wget git build-essential
+          apt-get install -y sudo curl wget git build-essential jq
 
       - name: Checkout repository
         uses: actions/checkout@v4
