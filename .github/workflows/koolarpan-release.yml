@@ -280,27 +280,35 @@ jobs:
           npm run tauri android init -- --config src-tauri/tauri.conf.koolarpan.json
       
       - name: Build Tauri app
-        run: npm run tauri android build  -- --config src-tauri/tauri.conf.koolarpan.json --apk true
+        run: npm run tauri android build  -- --config src-tauri/tauri.conf.koolarpan.json --apk true --debug
       
-      - name: Find and rename APK
+      - name: Find and rename APKs
         run: |
-          # Find the APK - location varies by Gradle/Tauri version
-          APK_PATH=$(find src-tauri/gen/android/app/build/outputs/apk -name '*.apk' | head -1)
-          if [ -z "$APK_PATH" ]; then
-            echo "ERROR: No APK found!"
-            find src-tauri/gen/android/app/build/outputs/ -type f || true
+          # Find all architecture APKs and rename them to include architecture in name
+          find src-tauri/gen/android/app/build/outputs/apk -name '*.apk' | while read -r apk; do
+            filename=$(basename "$apk")
+            # Extract architecture (e.g., arm64-v8a)
+            arch=$(echo "$filename" | sed 's/app-//;s/-debug.apk//;s/-release-unsigned.apk//')
+            new_name="Audio.KoolArpan-${{ steps.version.outputs.version }}-$arch.apk"
+            echo "Preparing artifact: $new_name"
+            cp "$apk" "$new_name"
+          done
+          # Verify we found something
+          if [ -z "$(ls Audio.KoolArpan-*.apk 2>/dev/null)" ]; then
+            echo "ERROR: No APKs were found after build."
             exit 1
           fi
-          echo "Found APK at: $APK_PATH"
-          mv "$APK_PATH" "Audio.KoolArpan-${{ steps.version.outputs.version }}.apk"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.version.outputs.version }}-${{ github.run_number }}-koolarpan
           name: v${{ steps.version.outputs.version }}-${{ github.run_number }} (koolarpan)
-          body: "koolarpan build of Audion."
+          body: |
+            koolarpan build of Audion.
+            
+            **Android Tip:** Download the APK matching your device's architecture (usually `arm64-v8a`). If installation fails, uninstall any previous version of the app first.
           files: |
-            Audio.KoolArpan-${{ steps.version.outputs.version }}.apk
+            Audio.KoolArpan-${{ steps.version.outputs.version }}-*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
