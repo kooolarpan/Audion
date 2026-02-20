@@ -43,7 +43,7 @@ jobs:
         id: version
         shell: pwsh
         run: |
-          $json = Get-Content src-tauri/tauri.conf.koolarpan.json | ConvertFrom-Json
+          $json = Get-Content src-tauri/tauri.conf.json | ConvertFrom-Json
           echo "version=$($json.version)" >> $env:GITHUB_OUTPUT
       
       - name: Setup Node.js
@@ -64,17 +64,17 @@ jobs:
         run: npm install
       
       - name: Build Tauri app
-        run: npm run tauri:build:koolarpan
+        run: npm run tauri:build
       
       - name: Rename artifacts
         shell: pwsh
         run: |
           Get-ChildItem -Path "src-tauri/target/release/bundle/msi/*.msi" | ForEach-Object {
-            $newName = "Audio.KoolArpan-${{ steps.version.outputs.version }}_x64-setup.msi"
+            $newName = "Audion-${{ steps.version.outputs.version }}_x64-setup.msi"
             Rename-Item -Path $_.FullName -NewName $newName
           }
           Get-ChildItem -Path "src-tauri/target/release/bundle/nsis/*.exe" | ForEach-Object {
-            $newName = "Audio.KoolArpan-${{ steps.version.outputs.version }}_x64-setup.exe"
+            $newName = "Audion-${{ steps.version.outputs.version }}_x64-setup.exe"
             Rename-Item -Path $_.FullName -NewName $newName
           }
 
@@ -111,7 +111,7 @@ jobs:
       - name: Read app version
         id: version
         run: |
-          VERSION=$(jq -r '.version' src-tauri/tauri.conf.koolarpan.json)
+          VERSION=$(jq -r '.version' src-tauri/tauri.conf.json)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
       
       - name: Setup Node.js
@@ -152,17 +152,17 @@ jobs:
         run: npm install
       
       - name: Build Tauri app
-        run: xvfb-run npm run tauri:build:koolarpan
+        run: xvfb-run npm run tauri:build
       
       - name: Rename artifacts
         shell: bash
         run: |
           shopt -s nullglob
           for f in src-tauri/target/release/bundle/deb/*.deb; do
-            mv "$f" "Audio.KoolArpan-${{ steps.version.outputs.version }}_amd64.deb"
+            mv "$f" "Audion-${{ steps.version.outputs.version }}_amd64.deb"
           done
           for f in src-tauri/target/release/bundle/appimage/*.AppImage; do
-            mv "$f" "Audio.KoolArpan-${{ steps.version.outputs.version }}_x86_64.AppImage"
+            mv "$f" "Audion-${{ steps.version.outputs.version }}_x86_64.AppImage"
           done
 
       - name: Create GitHub Release
@@ -172,8 +172,8 @@ jobs:
           name: v${{ steps.version.outputs.version }}-${{ github.run_number }} (koolarpan)
           body: "koolarpan build of Audion."
           files: |
-            Audio.KoolArpan-${{ steps.version.outputs.version }}_amd64.deb
-            Audio.KoolArpan-${{ steps.version.outputs.version }}_x86_64.AppImage
+            Audion-${{ steps.version.outputs.version }}_amd64.deb
+            Audion-${{ steps.version.outputs.version }}_x86_64.AppImage
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -188,7 +188,7 @@ jobs:
       - name: Read app version
         id: version
         run: |
-          VERSION=$(jq -r '.version' src-tauri/tauri.conf.koolarpan.json)
+          VERSION=$(jq -r '.version' src-tauri/tauri.conf.json)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
       
       - name: Setup Node.js
@@ -211,17 +211,17 @@ jobs:
         run: npm install
       
       - name: Build Tauri app
-        run: npm run tauri:build:koolarpan -- --target universal-apple-darwin
+        run: npm run tauri:build -- --target universal-apple-darwin
       
       - name: Rename artifacts
         shell: bash
         run: |
           shopt -s nullglob
           for f in src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg; do
-            mv "$f" "Audio.KoolArpan-${{ steps.version.outputs.version }}_universal.dmg"
+            mv "$f" "Audion-${{ steps.version.outputs.version }}_universal.dmg"
           done
           for f in src-tauri/target/universal-apple-darwin/release/bundle/macos/*.app.tar.gz; do
-            mv "$f" "Audio.KoolArpan-${{ steps.version.outputs.version }}_universal.app.tar.gz"
+            mv "$f" "Audion-${{ steps.version.outputs.version }}_universal.app.tar.gz"
           done
 
       - name: Create GitHub Release
@@ -231,8 +231,8 @@ jobs:
           name: v${{ steps.version.outputs.version }}-${{ github.run_number }} (koolarpan)
           body: "koolarpan build of Audion."
           files: |
-            Audio.KoolArpan-${{ steps.version.outputs.version }}_universal.dmg
-            Audio.KoolArpan-${{ steps.version.outputs.version }}_universal.app.tar.gz
+            Audion-${{ steps.version.outputs.version }}_universal.dmg
+            Audion-${{ steps.version.outputs.version }}_universal.app.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -247,7 +247,7 @@ jobs:
       - name: Read app version
         id: version
         run: |
-          VERSION=$(jq -r '.version' src-tauri/tauri.conf.koolarpan.json)
+          VERSION=$(jq -r '.version' src-tauri/tauri.conf.json)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
       
       - name: Setup Java
@@ -297,7 +297,7 @@ jobs:
           
           # 2. Initialize Android project
           rm -rf src-tauri/gen/android
-          npx tauri android init --config src-tauri/tauri.conf.koolarpan.json
+          npx tauri android init
           
           # 3. Copy custom icons to the generated android project
           if [ -d "src-tauri/icons/android" ]; then
@@ -311,7 +311,7 @@ jobs:
           export TAURI_ANDROID_KEY_PASSWORD=password
           
           echo "Building Android APKs (Release mode)..."
-          npx tauri android build --config src-tauri/tauri.conf.koolarpan.json --apk true --split-per-abi
+          npx tauri android build --apk true --split-per-abi
           
           # Debug: List all files in the output directory
           echo "=== Android Build Output Listing ==="
@@ -322,7 +322,7 @@ jobs:
         shell: bash
         run: |
           # Cleanup any old artifacts from root
-          rm -f Audio.KoolArpan-*.apk
+          rm -f Audion-*.apk
           
           # Priority: release.apk > release-unsigned.apk > debug.apk
           # We search for the best available APK for each architecture
@@ -356,7 +356,7 @@ jobs:
             fi
             
             if [ -n "$apk" ]; then
-              new_name="Audio.KoolArpan-${{ steps.version.outputs.version }}-$arch.apk"
+              new_name="Audion-${{ steps.version.outputs.version }}-$arch.apk"
               echo "✅ Selected $apk -> $new_name"
               cp "$apk" "$new_name"
               
@@ -373,7 +373,7 @@ jobs:
           done
           
           # Final check
-          if [ -z "$(ls Audio.KoolArpan-*.apk 2>/dev/null)" ]; then
+          if [ -z "$(ls Audion-*.apk 2>/dev/null)" ]; then
             echo "ERROR: No renamed APKs created."
             exit 1
           fi
@@ -391,6 +391,6 @@ jobs:
             
             **Tip:** Download the APK matching your device's architecture (usually `arm64-v8a`).
           files: |
-            Audio.KoolArpan-${{ steps.version.outputs.version }}-*.apk
+            Audion-${{ steps.version.outputs.version }}-*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
