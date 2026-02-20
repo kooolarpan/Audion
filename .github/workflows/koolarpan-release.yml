@@ -103,7 +103,7 @@ jobs:
       - name: Install required tools
         run: |
           apt-get update
-          apt-get install -y sudo curl wget git build-essential jq
+          apt-get install -y sudo curl wget git build-essential jq pkg-config
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -138,7 +138,8 @@ jobs:
             libayatana-appindicator3-dev \
             librsvg2-dev \
             libasound2-dev \
-            patchelf
+            patchelf \
+            xvfb
       
       - name: Install dependencies
         run: npm install
@@ -280,7 +281,7 @@ jobs:
           npm run tauri android init -- --config src-tauri/tauri.conf.koolarpan.json
       
       - name: Build Tauri app
-        run: npm run tauri android build  -- --config src-tauri/tauri.conf.koolarpan.json --apk true --debug
+        run: npm run tauri android build -- --config src-tauri/tauri.conf.koolarpan.json --apk true --split-per-abi
       
       - name: Find and rename APKs
         run: |
