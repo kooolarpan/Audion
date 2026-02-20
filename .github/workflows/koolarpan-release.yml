@@ -142,7 +142,9 @@ jobs:
             libsoup2.4-dev \
             libnm-dev \
             libssl-dev \
+            libfuse2 \
             file \
+            xdg-utils \
             patchelf \
             xvfb
       
