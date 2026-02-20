@@ -316,6 +316,7 @@ a:hover {
     --player-height: 64px;
     --header-height: 48px;
     --mobile-bottom-inset: 130px; /* 60px nav + 64px player + 6px margin */
+  }
   .show-mobile {
     display: initial !important;
   }

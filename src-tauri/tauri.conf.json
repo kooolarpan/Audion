@@ -51,11 +51,11 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "android": {
-      "minSdkVersion": 24
-    },
     "macOS": {
       "infoPlist": "Info.plist"
+    },
+    "android": {
+      "minSdkVersion": 24
     }
   },
   "plugins": {}
