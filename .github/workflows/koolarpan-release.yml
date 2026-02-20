@@ -278,13 +278,25 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Initialize Android project
+      - name: Initialize and build Android project
         run: |
+          # 1. Create a signing key so the APK is valid for installation (fixes "invalid package")
+          keytool -genkey -v -keystore release.keystore -alias audion -keyalg RSA -keysize 2048 -validity 10000 -storepass password -keypass password -dname "CN=Audion, OU=KoolArpan, O=KoolArpan, L=City, S=State, C=US"
+          
+          # 2. Initialize Android project
           rm -rf src-tauri/gen/android
           npm run tauri android init -- --config src-tauri/tauri.conf.koolarpan.json
-      
-      - name: Build Tauri app
-        run: npm run tauri android build -- --config src-tauri/tauri.conf.koolarpan.json --apk true --split-per-abi
+          
+          # 3. Copy custom icons to the generated android project (fixes the icon issue)
+          cp -r src-tauri/icons/android/* src-tauri/gen/android/app/src/main/res/
+          
+          # 4. Build split APKs using the signing key
+          export TAURI_ANDROID_KEYSTORE=$GITHUB_WORKSPACE/release.keystore
+          export TAURI_ANDROID_KEYSTORE_PASSWORD=password
+          export TAURI_ANDROID_KEY_ALIAS=audion
+          export TAURI_ANDROID_KEY_PASSWORD=password
+          
+          npm run tauri android build -- --config src-tauri/tauri.conf.koolarpan.json --apk true --split-per-abi
       
       - name: Find and rename APKs
         run: |
