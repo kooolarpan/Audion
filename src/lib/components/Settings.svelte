@@ -856,6 +856,10 @@
           <p class="copyright">
             A modern music player built with Tauri & Svelte
           </p>
+          <p class="builder-info">
+            Original Author: <a href="https://github.com/dupitydumb" target="_blank" rel="noopener noreferrer"><strong>dupitydumb</strong></a><br />
+            Built by <a href="https://github.com/kooolarpan" target="_blank" rel="noopener noreferrer"><strong>KoolArpan</strong></a>
+          </p>
         </div>
       </section>
     </div>
@@ -883,10 +887,11 @@
       on:keydown|stopPropagation
       role="dialog"
       aria-modal="true"
+      tabindex="0"
     >
       <div class="modal-header">
         <h2>Reset Database</h2>
-        <button class="modal-close" on:click={closeResetModal}>
+        <button class="modal-close" on:click={closeResetModal} aria-label="Close modal">
           <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
             <path
               d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
@@ -1201,6 +1206,25 @@
   .copyright {
     font-size: 0.75rem;
     color: var(--text-subdued);
+    margin-bottom: var(--spacing-xs);
+  }
+  
+  .builder-info {
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+  }
+
+  .builder-info strong {
+    color: var(--accent-primary);
+  }
+
+  .builder-info a {
+    text-decoration: none;
+    transition: opacity var(--transition-fast);
+  }
+
+  .builder-info a:hover {
+    opacity: 0.8;
   }
 
   /* Toggle Switch */

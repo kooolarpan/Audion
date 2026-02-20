@@ -218,7 +218,6 @@
                         on:input={handleSearchInput}
                         on:keydown={handleKeydown}
                         spellcheck="false"
-                        autofocus
                     />
                     <button
                         class="clear-search"
@@ -238,7 +237,7 @@
                     </button>
                 </div>
             {:else}
-                <span class="mobile-title">Audion</span>
+                <span class="mobile-title">Audion (KoolArpan)</span>
                 <button
                     class="nav-btn search-toggle-btn"
                     on:click={() => mobileSearchOpen = true}

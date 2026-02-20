@@ -34,6 +34,8 @@
           "$APPDATA/**",
           "$AUDIO/**",
           "$MUSIC/**",
+          "$HOME/.config/audion/**",
+          "$HOME/.config/audion (KoolArpan)/**",
           "**"
         ]
       }
