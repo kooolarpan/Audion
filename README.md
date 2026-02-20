@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/dupitydumb/Audion/releases"><img src="https://img.shields.io/badge/version-1.2.1-blue.svg" alt="Version"></a>
+  <a href="https://github.com/kooolarpan/Audion/releases"><img src="https://img.shields.io/badge/version-1.2.1-blue.svg" alt="Version"></a>
   <img src="https://img.shields.io/badge/platform-Windows-blue.svg" alt="Platform">
   <a href="https://discord.gg/27XRVQsBd9"><img src="https://img.shields.io/discord/1234567890?color=5865F2&label=Discord&logo=discord&logoColor=white" alt="Discord"></a>
 </p>
@@ -17,6 +17,8 @@
 ## 🎵 What is Audion?
 
 Audion is a privacy-focused music player that brings the Spotify experience to your local music library. No internet required, no tracking—just your music, beautifully organized.
+
+This is a custom build maintained by [KoolArpan](https://github.com/kooolarpan), based on the original [Audion](https://github.com/dupitydumb/Audion) project by [dupitydumb](https://github.com/dupitydumb).
 
 **Key highlights:**
 - Synced lyrics with karaoke-style word highlighting
@@ -48,7 +50,7 @@ Audion is a privacy-focused music player that brings the Spotify experience to y
 ## ⚡ Quick Start
 
 ### Download
-Get the latest version from [Releases](https://github.com/dupitydumb/Audion/releases/latest)
+Get the latest version from [Releases](https://github.com/kooolarpan/Audion/releases/latest)
 
 **Windows:** `Audion_x64-setup.exe`  
 **macOS & Linux:** Coming soon
@@ -88,7 +90,7 @@ Extend Audion with JavaScript/WASM plugins. [Learn more →](./PLUGINS.md)
 
 **Requirements:** Node.js 18+, Rust (latest), Tauri CLI
 ```bash
-git clone https://github.com/dupitydumb/Audion.git
+git clone https://github.com/kooolarpan/Audion.git
 cd audion
 npm install
 npm run tauri dev    # Development
@@ -154,12 +156,13 @@ sudo pacman -S webkit2gtk-4.1 gtk3 libappindicator-gtk3
 ## 🤝 Contributing
 
 Contributions are welcome! Check out:
-- [Issues](https://github.com/dupitydumb/Audion/issues) for bugs and feature requests
+- [Issues](https://github.com/kooolarpan/Audion/issues) for bugs and feature requests
 - [PLUGINS.md](./PLUGINS.md) to create plugins
 - [Discord](https://discord.gg/27XRVQsBd9) to discuss ideas
 
 ---
 
 <p align="center">
+  Based on the original <a href="https://github.com/dupitydumb/Audion">Audion</a> repository<br>
   Built with <a href="https://tauri.app">Tauri</a> and <a href="https://svelte.dev">Svelte</a>
 </p>
