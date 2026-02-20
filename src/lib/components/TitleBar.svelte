@@ -237,7 +237,7 @@
                     </button>
                 </div>
             {:else}
-                <span class="mobile-title">Audion (KoolArpan)</span>
+                <span class="mobile-title">Audion</span>
                 <button
                     class="nav-btn search-toggle-btn"
                     on:click={() => mobileSearchOpen = true}

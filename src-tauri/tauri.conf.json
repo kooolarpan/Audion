@@ -2,7 +2,7 @@
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Audion",
   "version": "1.2.1",
-  "identifier": "com.audion.app",
+  "identifier": "com.audion.koolarpan.app",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -29,13 +29,12 @@
       "assetProtocol": {
         "enable": true,
         "scope": [
-          "$HOME/.local/share/com.audion.app/**",
+          "$HOME/.local/share/com.audion.koolarpan.app/**",
           "$HOME/.local/share/**",
           "$APPDATA/**",
           "$AUDIO/**",
           "$MUSIC/**",
           "$HOME/.config/audion/**",
-          "$HOME/.config/audion (KoolArpan)/**",
           "**"
         ]
       }
