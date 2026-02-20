@@ -292,47 +292,89 @@ jobs:
       - name: Initialize and build Android project
         shell: bash
         run: |
-          # 1. Create a signing key so the APK is valid for installation (fixes "invalid package")
-          keytool -genkey -v -keystore release.keystore -alias audion -keyalg RSA -keysize 2048 -validity 10000 -storepass password -keypass password -dname "CN=Audion, OU=KoolArpan, O=KoolArpan, L=City, S=State, C=US"
+          # 1. Create a signing key (PKCS12 is required for modern Android builds)
+          keytool -genkeypair -v -keystore release.keystore -alias audion -keyalg RSA -keysize 2048 -validity 10000 -storepass password -keypass password -dname "CN=Audion, OU=KoolArpan, O=KoolArpan, L=City, S=State, C=US" -deststoretype pkcs12
           
           # 2. Initialize Android project
           rm -rf src-tauri/gen/android
-          npm run tauri android init -- --config src-tauri/tauri.conf.koolarpan.json
+          npx tauri android init --config src-tauri/tauri.conf.koolarpan.json
           
-          # 3. Copy custom icons to the generated android project (fixes the icon issue)
+          # 3. Copy custom icons to the generated android project
           if [ -d "src-tauri/icons/android" ]; then
             cp -r src-tauri/icons/android/* src-tauri/gen/android/app/src/main/res/ || true
           fi
           
           # 4. Build split APKs using the signing key
-          export TAURI_ANDROID_KEYSTORE=$GITHUB_WORKSPACE/release.keystore
+          export TAURI_ANDROID_KEYSTORE="$(pwd)/release.keystore"
           export TAURI_ANDROID_KEYSTORE_PASSWORD=password
           export TAURI_ANDROID_KEY_ALIAS=audion
           export TAURI_ANDROID_KEY_PASSWORD=password
           
-          npm run tauri android build -- --config src-tauri/tauri.conf.koolarpan.json --apk true --split-per-abi
+          echo "Building Android APKs (Release mode)..."
+          npx tauri android build --config src-tauri/tauri.conf.koolarpan.json --apk --split-per-abi
           
           # Debug: List all files in the output directory
-          echo "Listing generated APKs:"
-          ls -R src-tauri/gen/android/app/build/outputs/apk || echo "Output directory not found"
+          echo "=== Android Build Output Listing ==="
+          find src-tauri/gen/android/app/build/outputs/apk -name "*.apk"
+          echo "===================================="
       
       - name: Find and rename APKs
         shell: bash
         run: |
-          # Find all architecture APKs and rename them to include architecture in name
-          # We look in the entire gen/android folder to be safe
-          find src-tauri/gen/android -name '*.apk' | while read -r apk; do
-            filename=$(basename "$apk")
-            echo "Found APK: $filename at $apk"
-            # Extract architecture (e.g., arm64-v8a)
-            arch=$(echo "$filename" | sed 's/app-//;s/-debug.apk//;s/-release-unsigned.apk//;s/-release.apk//')
-            new_name="Audio.KoolArpan-${{ steps.version.outputs.version }}-$arch.apk"
-            echo "Preparing artifact: $new_name"
-            cp "$apk" "$new_name"
+          # Cleanup any old artifacts from root
+          rm -f Audio.KoolArpan-*.apk
+          
+          # Priority: release.apk > release-unsigned.apk > debug.apk
+          # We search for the best available APK for each architecture
+          
+          # Find all unique architectures by looking at filenames
+          # Logic: app-[arch]-[type].apk -> [arch]
+          archs=$(find src-tauri/gen/android -name '*.apk' -exec basename {} \; | sed -E 's/app-(.*)-(release|debug|release-unsigned).apk/\1/' | sort -u)
+          
+          if [ -z "$archs" ]; then
+            echo "ERROR: No architectures identified from APK files."
+            find src-tauri/gen/android -name "*.apk"
+            exit 1
+          fi
+          
+          for arch in $archs; do
+            echo "Processing architecture: $arch"
+            
+            # Check for signed release APK first
+            apk=$(find src-tauri/gen/android -name "app-$arch-release.apk" | head -n 1)
+            
+            # Fallback to unsigned release
+            if [ -z "$apk" ]; then
+              echo "WARNING: No signed release APK found for $arch, trying unsigned..."
+              apk=$(find src-tauri/gen/android -name "app-$arch-release-unsigned.apk" | head -n 1)
+            fi
+            
+            # Fallback to debug
+            if [ -z "$apk" ]; then
+              echo "WARNING: No release APK found for $arch, trying debug..."
+              apk=$(find src-tauri/gen/android -name "app-$arch-debug.apk" | head -n 1)
+            fi
+            
+            if [ -n "$apk" ]; then
+              new_name="Audio.KoolArpan-${{ steps.version.outputs.version }}-$arch.apk"
+              echo "✅ Selected $apk -> $new_name"
+              cp "$apk" "$new_name"
+              
+              # VERIFY SIGNATURE (Critical for installation)
+              echo "Verifying $new_name signature..."
+              if apksigner verify --verbose "$new_name"; then
+                echo "GOOD: $new_name is properly signed."
+              else
+                echo "❌ CRITICAL: $new_name IS NOT SIGNED! It will fail to install."
+              fi
+            else
+              echo "❌ No APK found for architecture: $arch"
+            fi
           done
-          # Verify we found something
+          
+          # Final check
           if [ -z "$(ls Audio.KoolArpan-*.apk 2>/dev/null)" ]; then
-            echo "ERROR: No APKs were found after build."
+            echo "ERROR: No renamed APKs created."
             exit 1
           fi
 
@@ -344,7 +386,10 @@ jobs:
           body: |
             koolarpan build of Audion.
             
-            **Android Tip:** Download the APK matching your device's architecture (usually `arm64-v8a`). If installation fails, uninstall any previous version of the app first.
+            **⚠️ Android Installation Note:** 
+            Since this build uses a fresh signing key for security, you **MUST** uninstall any existing version of the app from your device before installing this APK. 
+            
+            **Tip:** Download the APK matching your device's architecture (usually `arm64-v8a`).
           files: |
             Audio.KoolArpan-${{ steps.version.outputs.version }}-*.apk
         env:
