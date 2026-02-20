@@ -53,6 +53,9 @@
     ],
     "android": {
       "minSdkVersion": 24
+    },
+    "macOS": {
+      "infoPlist": "Info.plist"
     }
   },
   "plugins": {}
