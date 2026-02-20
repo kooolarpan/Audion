@@ -311,7 +311,7 @@ jobs:
           export TAURI_ANDROID_KEY_PASSWORD=password
           
           echo "Building Android APKs (Release mode)..."
-          npx tauri android build --config src-tauri/tauri.conf.koolarpan.json --apk --split-per-abi
+          npx tauri android build --config src-tauri/tauri.conf.koolarpan.json --apk true --split-per-abi
           
           # Debug: List all files in the output directory
           echo "=== Android Build Output Listing ==="
